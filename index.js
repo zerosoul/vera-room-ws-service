@@ -1,9 +1,15 @@
+require('dotenv').config()
 const http = require('http')
 const express = require('express')
 const cors = require('cors')
 const socketIo = require('socket.io')
 const { addUser, removeUser, getUsersInRoom } = require('./users')
 const { GraphQLClient, gql } = require('graphql-request')
+const { ManagementClient } = require('authing-js-sdk')
+const managementClient = new ManagementClient({
+  userPoolId: '6034a31382f5d09e3b5a15fa',
+  secret: process.env.AUTHING_SECRET,
+})
 const app = express()
 app.use(cors())
 const server = http.createServer(app)
@@ -20,7 +26,17 @@ const CURRENT_PEERS = 'CURRENT_PEERS_EVENT'
 const PEER_JOIN_EVENT = 'PEER_JOIN_EVENT'
 const PEER_LEAVE_EVENT = 'PEER_LEAVE_EVENT'
 const gClient = new GraphQLClient('https://g.nicegoodthings.com/v1/graphql')
-
+const QUERY_ROOM_LIST = gql`
+  query RoomList {
+    portal_room {
+      personal
+      active
+      id
+      name
+      members
+    }
+  }
+`
 const QUERY_ROOM = gql`
   query Room($id: String!) {
     portal_room(where: { id: { _eq: $id } }) {
@@ -101,7 +117,7 @@ io.on('connection', (socket) => {
       },
       requestHeaders,
     )
-    .then(({ portal_room }) => {
+    .then(async ({ portal_room }) => {
       console.log({ portal_room })
       if (portal_room && portal_room[0]) {
         let [{ active, id, members }] = portal_room
@@ -124,19 +140,14 @@ io.on('connection', (socket) => {
         console.log('filterd', filterd)
         if (filterd.length == 0) {
           // append member
-
-          gClient
-            .request(
-              UPDATE_MEMBERS,
-              {
-                member,
-                id,
-              },
-              requestHeaders,
-            )
-            .then((wtf) => {
-              console.log(wtf)
-            })
+          gClient.request(
+            UPDATE_MEMBERS,
+            {
+              member,
+              id,
+            },
+            requestHeaders,
+          )
         }
       }
     })
@@ -173,6 +184,39 @@ server.listen(PORT, () => {
 app.get('/rooms/:roomId/users', (req, res) => {
   const users = getUsersInRoom(req.params.roomId)
   return res.json({ users })
+})
+app.get('/members/authing/:username', async (req, res) => {
+  console.log('rrrr')
+  let { username } = req.params
+  if (!username) return res.json(null)
+  let result = await gClient.request(QUERY_ROOM_LIST, {}, requestHeaders)
+  let rooms = result?.portal_room
+  const seen = new Set()
+  let users = rooms
+    .filter((r) => {
+      return (
+        r.host == username ||
+        (r.members && r.members.some((m) => m.username == username))
+      )
+    })
+    .map((room) => room.members)
+    .flat()
+    .filter((m) => {
+      if (!m.id || m.username == username) return false
+      const duplicate = seen.has(m.id)
+      seen.add(m.id)
+      return !duplicate
+    })
+  let udfs = await managementClient.users.getUdfValueBatch(
+    users.map((u) => u.id),
+  )
+
+  console.log({ result, users })
+  return res.json({
+    data: users.map((u) => {
+      return { ...u, traceId: udfs[u.id].notification || '' }
+    }),
+  })
 })
 app.get('/room/:creator', async (req, res) => {
   let { creator } = req.params
