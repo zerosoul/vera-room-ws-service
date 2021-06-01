@@ -64,7 +64,6 @@ const UPDATE_ACTIVE = gql`
   mutation UpdateActive($active: Boolean!, $id: String!) {
     update_portal_room(_set: { active: $active }, where: { id: { _eq: $id } }) {
       returning {
-        connect_id
         active
       }
     }
@@ -77,7 +76,6 @@ const UPDATE_MEMBERS = gql`
       where: { id: { _eq: $id } }
     ) {
       returning {
-        connect_id
         members
       }
     }
