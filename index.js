@@ -24,6 +24,7 @@ const io = socketIo(server, {
 const PORT = 4000
 const CURRENT_PEERS = 'CURRENT_PEERS_EVENT'
 const PEER_JOIN_EVENT = 'PEER_JOIN_EVENT'
+const USERNAME_UPDATE_EVENT = 'USERNAME_UPDATE_EVENT'
 const PEER_LEAVE_EVENT = 'PEER_LEAVE_EVENT'
 const gClient = new GraphQLClient('https://g.nicegoodthings.com/v1/graphql')
 const QUERY_ROOM_LIST = gql`
@@ -160,6 +161,11 @@ io.on('connection', (socket) => {
   let currUser = addUser(socket.id, roomId, { peerId, ...userInfo })
   // 向房间内其它人广播新加入的用户
   socket.broadcast.in(roomId).emit(PEER_JOIN_EVENT, currUser)
+  // 有用户更新名字
+  socket.on(USERNAME_UPDATE_EVENT, (data) => {
+    console.log(data)
+    socket.broadcast.in(roomId).emit(USERNAME_UPDATE_EVENT, data)
+  })
   // Leave the room if the user closes the socket
   socket.on('disconnect', () => {
     removeUser(socket.id)
