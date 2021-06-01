@@ -132,7 +132,7 @@ io.on('connection', (socket) => {
         let member = {
           id: userInfo.uid,
           photo: userInfo.avator,
-          username: userInfo.name,
+          username: userInfo.username,
         }
         let filterd = (members || []).filter((m) => {
           return shallowEqual(m, member)
