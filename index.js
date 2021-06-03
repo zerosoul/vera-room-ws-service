@@ -24,7 +24,8 @@ const io = socketIo(server, {
 const PORT = 4000
 const CURRENT_PEERS = 'CURRENT_PEERS_EVENT'
 const PEER_JOIN_EVENT = 'PEER_JOIN_EVENT'
-const USERNAME_UPDATE_EVENT = 'USERNAME_UPDATE_EVENT'
+// const USERNAME_UPDATE_EVENT = 'USERNAME_UPDATE_EVENT'
+// const SOMEONE_INFO_UPDATE = 'SOMEONE_INFO_UPDATE'
 const PEER_LEAVE_EVENT = 'PEER_LEAVE_EVENT'
 const gClient = new GraphQLClient('https://g.nicegoodthings.com/v1/graphql')
 const QUERY_ROOM_LIST = gql`
@@ -152,17 +153,29 @@ io.on('connection', (socket) => {
     })
   // 当前用户列表
   let currentRoomUsers = getUsersInRoom(roomId)
+  let currUser = { peerId, ...userInfo }
   console.log('current user list', roomId, currentRoomUsers)
+  // 第一个进来的
+  if (currentRoomUsers.length == 0) {
+    addUser(socket.id, roomId, currUser)
+  }
   socket.emit(CURRENT_PEERS, currentRoomUsers)
 
-  // add user
-  let currUser = addUser(socket.id, roomId, { peerId, ...userInfo })
-  // 向房间内其它人广播新加入的用户
-  socket.broadcast.in(roomId).emit(PEER_JOIN_EVENT, currUser)
-  // 有用户更新名字
-  socket.on(USERNAME_UPDATE_EVENT, (data) => {
+  // new user
+  socket.on('message', (data) => {
     console.log(data)
-    socket.broadcast.in(roomId).emit(USERNAME_UPDATE_EVENT, data)
+    const { cmd = 'NEW_PEER', payload = null } = data
+    switch (cmd) {
+      case 'NEW_PEER':
+        // add user
+        let newUser = addUser(socket.id, roomId, currUser)
+        // 向房间内其它人广播新加入的用户
+        socket.broadcast.in(roomId).emit(PEER_JOIN_EVENT, newUser)
+        break
+
+      default:
+        break
+    }
   })
   // Leave the room if the user closes the socket
   socket.on('disconnect', () => {
