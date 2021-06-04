@@ -4,7 +4,15 @@ const express = require('express')
 const cors = require('cors')
 const socketIo = require('socket.io')
 const { addUser, removeUser, getUsersInRoom } = require('./users')
-const { GraphQLClient, gql } = require('graphql-request')
+const { shallowEqual } = require('./utils')
+const {
+  gRequest,
+  QUERY_PERSONAL_ROOM,
+  QUERY_ROOM_LIST,
+  QUERY_ROOM,
+  UPDATE_ACTIVE,
+  UPDATE_MEMBERS,
+} = require('./graphqlClient')
 const { ManagementClient } = require('authing-js-sdk')
 const managementClient = new ManagementClient({
   userPoolId: '6034a31382f5d09e3b5a15fa',
@@ -27,81 +35,7 @@ const PEER_JOIN_EVENT = 'PEER_JOIN_EVENT'
 // const USERNAME_UPDATE_EVENT = 'USERNAME_UPDATE_EVENT'
 // const SOMEONE_INFO_UPDATE = 'SOMEONE_INFO_UPDATE'
 const PEER_LEAVE_EVENT = 'PEER_LEAVE_EVENT'
-const gClient = new GraphQLClient('https://g.nicegoodthings.com/v1/graphql')
-const QUERY_ROOM_LIST = gql`
-  query RoomList {
-    portal_room {
-      personal
-      active
-      id
-      name
-      members
-    }
-  }
-`
-const QUERY_ROOM = gql`
-  query Room($id: String!) {
-    portal_room(where: { id: { _eq: $id } }) {
-      personal
-      active
-      id
-      link
-      name
-      members
-    }
-  }
-`
-const QUERY_PERSONAL_ROOM = gql`
-  query Room($creator: String!) {
-    portal_room(
-      where: { creator: { _eq: $creator }, personal: { _eq: true } }
-    ) {
-      id
-      personal
-    }
-  }
-`
-const UPDATE_ACTIVE = gql`
-  mutation UpdateActive($active: Boolean!, $id: String!) {
-    update_portal_room(_set: { active: $active }, where: { id: { _eq: $id } }) {
-      returning {
-        active
-      }
-    }
-  }
-`
-const UPDATE_MEMBERS = gql`
-  mutation UpdateMembers($id: String!, $member: jsonb) {
-    update_portal_room(
-      _prepend: { members: $member }
-      where: { id: { _eq: $id } }
-    ) {
-      returning {
-        members
-      }
-    }
-  }
-`
-const requestHeaders = {
-  'content-type': 'application/json',
-  'x-hasura-admin-secret': 'tristan@privoce',
-}
-function shallowEqual(object1, object2) {
-  const keys1 = Object.keys(object1)
-  const keys2 = Object.keys(object2)
 
-  if (keys1.length !== keys2.length) {
-    return false
-  }
-
-  for (let key of keys1) {
-    if (object1[key] !== object2[key]) {
-      return false
-    }
-  }
-
-  return true
-}
 io.on('connection', (socket) => {
   console.log(`${socket.id} connected`)
   // Join a room
@@ -109,57 +43,49 @@ io.on('connection', (socket) => {
   socket.join(roomId)
 
   // Overrides the clients headers with the passed values
-  gClient
-    .request(
-      QUERY_ROOM,
-      {
-        id: roomId,
-      },
-      requestHeaders,
-    )
-    .then(async ({ portal_room }) => {
-      console.log({ portal_room })
-      if (portal_room && portal_room[0]) {
-        let [{ active, id, members }] = portal_room
-        if (!active) {
-          // 设置 room 在线
-          gClient
-            .request(UPDATE_ACTIVE, { active: true, id }, requestHeaders)
-            .then((wtf) => {
-              console.log(wtf)
-            })
-        }
-        let member = {
-          id: userInfo.uid,
-          photo: userInfo.avator,
-          username: userInfo.username,
-        }
-        let filterd = (members || []).filter((m) => {
-          return shallowEqual(m, member)
+  gRequest(QUERY_ROOM, {
+    id: roomId,
+  }).then(async ({ portal_room }) => {
+    console.log({ portal_room })
+    if (portal_room && portal_room[0]) {
+      let [{ active, id, members }] = portal_room
+      if (!active) {
+        // 设置 room 在线
+        gRequest(UPDATE_ACTIVE, { active: true, id }).then((wtf) => {
+          console.log(wtf)
         })
-        console.log('filterd', filterd)
-        if (filterd.length == 0) {
-          // append member
-          gClient.request(
-            UPDATE_MEMBERS,
-            {
-              member,
-              id,
-            },
-            requestHeaders,
-          )
-        }
       }
-    })
+      let member = {
+        id: userInfo.uid,
+        photo: userInfo.avator,
+        username: userInfo.username,
+      }
+      let filterd = (members || []).filter((m) => {
+        return shallowEqual(m, member)
+      })
+      console.log('filterd', filterd)
+      if (filterd.length == 0) {
+        // append member
+        gRequest(UPDATE_MEMBERS, {
+          member,
+          id,
+        })
+      }
+    }
+  })
   // 当前用户列表
   let currentRoomUsers = getUsersInRoom(roomId)
   let currUser = { peerId, ...userInfo }
   console.log('current user list', roomId, currentRoomUsers)
-  // 第一个进来的
+  // 第一个进来的，初始化房间人数为1
+  let host = false
   if (currentRoomUsers.length == 0) {
+    host = true
     addUser(socket.id, roomId, currUser)
+    // 现在人数为1了
+    currentRoomUsers = getUsersInRoom(roomId)
   }
-  socket.emit(CURRENT_PEERS, currentRoomUsers)
+  socket.emit(CURRENT_PEERS, { users: currentRoomUsers, host })
 
   // new user
   socket.on('message', (data) => {
@@ -171,6 +97,9 @@ io.on('connection', (socket) => {
         let newUser = addUser(socket.id, roomId, currUser)
         // 向房间内其它人广播新加入的用户
         socket.broadcast.in(roomId).emit(PEER_JOIN_EVENT, newUser)
+        // 更新自己的
+        let newUsers = getUsersInRoom(roomId)
+        socket.emit(CURRENT_PEERS, { users: newUsers, update: true })
         break
 
       default:
@@ -183,13 +112,11 @@ io.on('connection', (socket) => {
     io.in(roomId).emit(PEER_LEAVE_EVENT, currUser)
     socket.leave(roomId)
     let currUsers = getUsersInRoom(roomId)
+    // 房间没人了
     if (currUsers.length == 0) {
-      // 房间没人了
-      gClient
-        .request(UPDATE_ACTIVE, { active: false, id: roomId }, requestHeaders)
-        .then((wtf) => {
-          console.log(wtf)
-        })
+      gRequest(UPDATE_ACTIVE, { active: false, id: roomId }).then((wtf) => {
+        console.log(wtf)
+      })
     }
   })
 })
@@ -197,7 +124,7 @@ io.on('connection', (socket) => {
 server.listen(PORT, () => {
   console.log(`Listening on port ${PORT}`)
 })
-
+// APIs
 app.get('/rooms/:roomId/users', (req, res) => {
   const users = getUsersInRoom(req.params.roomId)
   return res.json({ users })
@@ -206,7 +133,7 @@ app.get('/members/authing/:username', async (req, res) => {
   console.log('rrrr')
   let { username } = req.params
   if (!username) return res.json(null)
-  let result = await gClient.request(QUERY_ROOM_LIST, {}, requestHeaders)
+  let result = await gRequest(QUERY_ROOM_LIST, {})
   let rooms = result?.portal_room
   const seen = new Set()
   let users = rooms
@@ -239,13 +166,9 @@ app.get('/room/:creator', async (req, res) => {
   let { creator } = req.params
   let room = null
   if (creator) {
-    let result = await gClient.request(
-      QUERY_PERSONAL_ROOM,
-      {
-        creator,
-      },
-      requestHeaders,
-    )
+    let result = await gRequest(QUERY_PERSONAL_ROOM, {
+      creator,
+    })
     room = result.portal_room[0] || null
   }
   return res.json({ room })
