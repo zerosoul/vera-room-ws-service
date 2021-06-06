@@ -16,7 +16,9 @@ const managementClient = new ManagementClient({
   secret: process.env.AUTHING_SECRET,
 });
 const app = express();
-app.use(cors());
+app.use(cors({
+  origin: "*"
+}));
 const server = http.createServer(app);
 const io = socketIo(server, {
   cors: {
