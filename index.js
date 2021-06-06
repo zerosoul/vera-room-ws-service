@@ -8,7 +8,7 @@ const {
   gRequest,
   QUERY_ROOM_LIST,
 } = require("./graphqlClient");
-const getRoomInstance = require("./room");
+const getRoomInstance = require("./Room");
 
 
 const managementClient = new ManagementClient({
@@ -16,9 +16,7 @@ const managementClient = new ManagementClient({
   secret: process.env.AUTHING_SECRET,
 });
 const app = express();
-app.use(cors({
-  origin: "*"
-}));
+app.use(cors());
 const server = http.createServer(app);
 const io = socketIo(server, {
   cors: {
