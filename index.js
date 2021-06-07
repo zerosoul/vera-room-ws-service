@@ -45,7 +45,7 @@ io.on("connection", async (socket) => {
   console.log({ CurrentRoom });
   const member = {
     id: userInfo.uid,
-    photo: userInfo.avator,
+    photo: userInfo.photo,
     username: userInfo.username,
   };
   CurrentRoom.appendMember(member);

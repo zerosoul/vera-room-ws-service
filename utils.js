@@ -15,7 +15,7 @@ function shallowEqual(object1, object2) {
   return true;
 }
 function sameUser(u1, u2) {
-  // let compareKeys = ["uid", "username", "avator"];
+  // let compareKeys = ["uid", "username", "photo"];
   //只比较uid是否一致
   let compareKeys = ["uid"];
   for (let key of compareKeys) {

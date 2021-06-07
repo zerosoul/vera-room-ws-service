@@ -1,6 +1,6 @@
 const users = [];
 
-const addUser = (id, room, userInfo = { username: "Guest", avator: "" }) => {
+const addUser = (id, room, userInfo = { username: "Guest", photo: "" }) => {
   const { username } = userInfo;
   // const existingUser = users.find(
   //   (user) => user.room === room && user.name === name,
