@@ -24,6 +24,8 @@ const io = socketIo(server, {
     methods: ["GET", "POST"],
     credentials: true,
   },
+  upgradeTimeout: 40000,
+  pingTimeout: 50000
 });
 
 const PORT = 4000;
@@ -87,7 +89,10 @@ io.on("connection", async (socket) => {
     }
   });
   // Leave the room if the user closes the socket
-  socket.on("disconnect", () => {
+  socket.on("disconnect", (reason) => {
+    console.log("disconnect reason", reason);
+    // ping timeout 先忽略？
+    if (reason == "ping timeout") return;
     CurrentRoom.removeActiveUser(socket.id);
     io.in(roomId).emit(PEER_LEAVE_EVENT, currUser);
     socket.leave(roomId);
