@@ -31,6 +31,7 @@ const io = socketIo(server, {
 const PORT = 4000;
 const CURRENT_PEERS = "CURRENT_PEERS_EVENT";
 const PEER_JOIN_EVENT = "PEER_JOIN_EVENT";
+const NEW_TAB_EVENT = "NEW_TAB_EVENT";
 // const USERNAME_UPDATE_EVENT = 'USERNAME_UPDATE_EVENT'
 // const SOMEONE_INFO_UPDATE = 'SOMEONE_INFO_UPDATE'
 const PEER_LEAVE_EVENT = "PEER_LEAVE_EVENT";
@@ -72,6 +73,11 @@ io.on("connection", async (socket) => {
     const { cmd = "NEW_PEER", payload = null } = data;
     console.log({ payload });
     switch (cmd) {
+      case "NEW_TAB":
+        // 新开的tab
+        console.log("new tab event");
+        socket.broadcast.in(roomId).emit(NEW_TAB_EVENT, payload);
+        break;
       case "NEW_PEER":
         // add user
         // 向房间内其它人广播新加入的用户
