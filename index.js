@@ -92,7 +92,7 @@ io.on("connection", async (socket) => {
   socket.on("disconnect", (reason) => {
     console.log("disconnect reason", reason);
     // ping timeout 先忽略？
-    if (reason == "ping timeout") return;
+    // if (reason == "ping timeout") return;
     CurrentRoom.removeActiveUser(socket.id);
     io.in(roomId).emit(PEER_LEAVE_EVENT, currUser);
     socket.leave(roomId);
