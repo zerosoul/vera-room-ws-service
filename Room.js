@@ -33,7 +33,10 @@ class Room {
             const [{ active, members, link }] = result.portal_room;
             this.link = link;
             this.active = active;
-            this.members = members;
+            this.members = members.map(m => {
+                const { id, ...rest } = m;
+                return { uid: id, ...rest };
+            });
             // 激活当前房间
             if (!active) {
                 this.setActive();
@@ -70,6 +73,7 @@ class Room {
         console.log("filterd", filterd);
         if (filterd.length == 0) {
             // append member
+            console.log("append member", member);
             gRequest(UPDATE_MEMBERS, {
                 member,
                 id: this.id,
