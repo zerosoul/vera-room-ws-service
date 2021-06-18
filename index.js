@@ -44,16 +44,17 @@ io.on("connection", async (socket) => {
   socket.join(roomId);
   // room factory
   const CurrentRoom = await getRoomInstance({ id: roomId, temp, link });
-  // Overrides the clients headers with the passed values
   console.log({ CurrentRoom });
+  // 当前暂存内存中的user，id指的是当前ws连接的id，uid指的是authing的uid，和authing保持一致
   const member = {
-    id: userInfo.uid,
+    id: socket.id,
+    uid: userInfo.uid,
     photo: userInfo.photo,
     username: userInfo.username,
   };
   CurrentRoom.appendMember(member);
 
-  // 当前用户列表
+  // 当前用户
   const currUser = { peerId, ...userInfo };
   // 第一个进来的，初始化房间人数为1
   let host = false;
