@@ -69,6 +69,8 @@ class Room {
     appendMember(member) {
         // 更新参与者
         if (!this.members) return;
+        // 如果没有uid，就pass掉
+        if (!member.uid) return;
         const filterd = this.members.filter((m) => sameUser(m, member));
         console.log("filterd", filterd);
         if (filterd.length == 0) {
