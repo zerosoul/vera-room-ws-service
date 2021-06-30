@@ -39,12 +39,12 @@ io.on("connection", async (socket) => {
   console.log(`${socket.id} connected`);
   // Join a room
   const {
-    roomId, temp = false, link, peerId, ...userInfo
+    roomId, winId, temp = false, link, peerId, ...userInfo
   } = socket.handshake.query;
   socket.join(roomId);
   // room factory
   const CurrentRoom = await getRoomInstance({ id: roomId, temp, link });
-  console.log({ CurrentRoom });
+  console.log({ CurrentRoom, roomId, winId });
   // 当前暂存内存中的user，id指的是当前ws连接的id，uid指的是authing的uid，和authing保持一致
   const member = {
     id: socket.id,
@@ -56,7 +56,7 @@ io.on("connection", async (socket) => {
 
   // 当前用户
   const currUser = { peerId, ...userInfo };
-  // 第一个进来的，初始化房间人数为1
+  // 第一个进来，初始化房间人数为1
   let host = false;
   if (CurrentRoom.activeUsers.length == 0) {
     host = true;
@@ -76,7 +76,7 @@ io.on("connection", async (socket) => {
     switch (cmd) {
       case TAB_EVENT:
         // 新开的tab
-        console.log("new tab event");
+        console.log("tab event");
         socket.broadcast.in(roomId).emit(TAB_EVENT, payload);
         break;
       case "NEW_PEER":
