@@ -25,4 +25,5 @@ function sameUser(u1, u2) {
   }
   return true;
 }
-module.exports = { shallowEqual, sameUser };
+const arrayChunks = (array, chunk_size) => Array(Math.ceil(array.length / chunk_size)).fill().map((_, index) => index * chunk_size).map(begin => array.slice(begin, begin + chunk_size));
+module.exports = { shallowEqual, sameUser, arrayChunks };

@@ -4,6 +4,7 @@ const express = require("express");
 const cors = require("cors");
 const socketIo = require("socket.io");
 const { ManagementClient } = require("authing-js-sdk");
+const { arrayChunks } = require("./utils");
 const {
   gRequest,
   QUERY_ROOM_LIST,
@@ -130,13 +131,28 @@ app.get("/members/authing/:username", async (req, res) => {
     seen.add(m.id);
     return !duplicate;
   });
-  const udfs = await managementClient.users.getUdfValueBatch(
-    users.map((u) => u.id),
-  );
+  let udfs = {};
+  try {
+    let userIds = users.map((u) => u.uid);
+    let chunks = arrayChunks(userIds, 10);
+    let results = await Promise.all(chunks.map((ids) => {
+
+      return managementClient.users.getUdfValueBatch(
+        ids
+      );
+    }));
+    // udfs = await managementClient.users.getUdfValueBatch(
+    //   users.map((u) => u.uid),
+    // );
+    udfs = Object.assign({}, ...results);
+    console.log({ chunks, results });
+  } catch (error) {
+    console.log(error);
+  }
 
   console.log({ result, users });
   return res.json({
-    data: users.map((u) => ({ ...u, traceId: udfs[u.id].notification || "" })),
+    data: users.map((u) => ({ ...u, traceId: udfs[u.uid].notification || "" })),
   });
 });
 
