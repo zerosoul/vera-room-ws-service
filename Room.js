@@ -8,7 +8,6 @@ const {
     NEW_ROOM
 } = require("./graphqlClient");
 const { sameUser } = require("./utils");
-const { addUser, removeUser, getUsersInRoom } = require("./users");
 const Rooms = {};
 class Room {
     constructor({ id, temp = "false", link = "" }) {
@@ -17,10 +16,11 @@ class Room {
         this.link = link;
         this.active = false;
         this.members = null;
+        this.users = {};
         this.keepUsers = [];
     }
     get activeUsers() {
-        return getUsersInRoom(this.id);
+        return Object.values(this.users);
     }
     async fetchData() {
         console.log("start fetch", this.temp, typeof this.temp);
@@ -33,10 +33,7 @@ class Room {
             const [{ active, members, link }] = result.portal_room;
             this.link = link;
             this.active = active;
-            this.members = members.map(m => {
-                const { id, ...rest } = m;
-                return { uid: id, ...rest };
-            });
+            this.members = members;
             // 激活当前房间
             if (!active) {
                 this.setActive();
@@ -84,8 +81,8 @@ class Room {
     }
     addActiveUser(sid, user) {
         // 新增活跃用户
-        let newUser = addUser(sid, this.id, user);
-        return newUser;
+        this.users[sid] = user;
+        return user;
     }
     addKeepUser(sid) {
         //   该用户选择保留临时房间
@@ -96,7 +93,7 @@ class Room {
         }
     }
     removeActiveUser(sid) {
-        removeUser(sid);
+        delete this.users[sid];
         // 房间没人了
         if (this.activeUsers.length == 0) {
             console.log("nobody");
