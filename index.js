@@ -33,6 +33,10 @@ const PORT = 4000;
 const CURRENT_PEERS = "CURRENT_PEERS_EVENT";
 const PEER_JOIN_EVENT = "PEER_JOIN_EVENT";
 const TAB_EVENT = "TAB_EVENT";
+const UPDATE_TABS = "UPDATE_TABS";
+// const CURRENT_TABS = "CURRENT_TABS";
+const UPDATE_ACTIVE_TAB = "UPDATE_ACTIVE_TAB";
+const UPDATE_USERS = "UPDATE_USERS";
 // const USERNAME_UPDATE_EVENT = 'USERNAME_UPDATE_EVENT'
 // const SOMEONE_INFO_UPDATE = 'SOMEONE_INFO_UPDATE'
 const PEER_LEAVE_EVENT = "PEER_LEAVE_EVENT";
@@ -52,6 +56,7 @@ io.on("connection", async (socket) => {
     uid: userInfo.uid,
     photo: userInfo.photo,
     username: userInfo.username,
+    activePage: link
   };
   CurrentRoom.appendMember(member);
 
@@ -61,6 +66,7 @@ io.on("connection", async (socket) => {
   let host = false;
   if (CurrentRoom.activeUsers.length == 0) {
     host = true;
+    currUser.host = true;
     // 临时room的创建者
     if (temp) {
       currUser.creator = true;
@@ -79,13 +85,24 @@ io.on("connection", async (socket) => {
         // 新开的tab
         console.log("tab event");
         socket.broadcast.in(roomId).emit(TAB_EVENT, payload);
+        CurrentRoom.workspaceData = payload.data;
         break;
       case "NEW_PEER":
         // add user
         // 向房间内其它人广播新加入的用户
         socket.broadcast.in(roomId).emit(PEER_JOIN_EVENT, CurrentRoom.addActiveUser(socket.id, currUser));
         // 更新自己的
-        socket.emit(CURRENT_PEERS, { users: CurrentRoom.activeUsers, update: true });
+        socket.emit(CURRENT_PEERS, { workspaceData: CurrentRoom.workspaceData, users: CurrentRoom.activeUsers, update: true });
+        break;
+      case UPDATE_TABS:
+        // 更新内存中的tab集合
+        console.log("UPDATE_TABS", payload.data);
+        CurrentRoom.tabs = payload.data;
+        break;
+      case UPDATE_ACTIVE_TAB:
+        // 更新内存活动tab
+        CurrentRoom.updateActiveTab(socket.id, payload.url);
+        socket.broadcast.in(roomId).emit(UPDATE_USERS, CurrentRoom.activeUsers);
         break;
       case "KEEP_ROOM":
         // 有用户选择保留房间

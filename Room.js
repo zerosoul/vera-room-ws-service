@@ -9,6 +9,17 @@ const {
 } = require("./graphqlClient");
 const { sameUser } = require("./utils");
 const Rooms = {};
+// 只保留需要的字段
+const filterMemberFields = (member = null) => {
+    if (!member) return member;
+    let keeps = ["id", "uid", "username", "avator", "creator", "photo"];
+    let filteredMember = Object.fromEntries(keeps.map(key => {
+
+        return [[key, member[key]]];
+    }));
+    return filteredMember;
+
+};
 class Room {
     constructor({ id, temp = "false", link = "" }) {
         this.id = id;
@@ -17,6 +28,7 @@ class Room {
         this.active = false;
         this.members = null;
         this.users = {};
+        this.workspaceData = null;
         this.keepUsers = [];
     }
     get activeUsers() {
@@ -74,7 +86,7 @@ class Room {
             // append member
             console.log("append member", member);
             gRequest(UPDATE_MEMBERS, {
-                member,
+                member: filterMemberFields(member),
                 id: this.id,
             });
         }
@@ -83,6 +95,12 @@ class Room {
         // 新增活跃用户
         this.users[sid] = user;
         return user;
+    }
+    updateActiveTab(sid, url) {
+        if (this.users[sid]) {
+            this.users[sid].activePage = url;
+            this.users = { ...this.users };
+        }
     }
     addKeepUser(sid) {
         //   该用户选择保留临时房间
