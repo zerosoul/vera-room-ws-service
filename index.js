@@ -86,7 +86,7 @@ io.on("connection", async (socket) => {
         console.log("update active url", activeUrl, socket.id);
         if (activeUrl) {
           CurrentRoom.updateActiveTab(socket.id, activeUrl);
-          socket.broadcast.in(roomId).emit(UPDATE_USERS, CurrentRoom.activeUsers);
+          socket.broadcast.in(roomId).emit(UPDATE_USERS, { users: CurrentRoom.activeUsers });
         }
       }
         break;
@@ -97,17 +97,17 @@ io.on("connection", async (socket) => {
         // 更新自己的
         socket.emit(CURRENT_PEERS, { workspaceData: CurrentRoom.workspaceData, users: CurrentRoom.activeUsers, update: true });
         //新人加入，更新user list
-        socket.broadcast.in(roomId).emit(UPDATE_USERS, CurrentRoom.activeUsers);
+        socket.broadcast.in(roomId).emit(UPDATE_USERS, { users: CurrentRoom.activeUsers });
         break;
       case "BE_HOST":
         // 成为房主
-        CurrentRoom.beHost(socket.id);
-        socket.broadcast.in(roomId).emit(UPDATE_USERS, CurrentRoom.activeUsers);
+        CurrentRoom.beHost(socket.id, payload.enable);
+        socket.to(roomId).emit(UPDATE_USERS, { users: CurrentRoom.activeUsers });
         break;
       case "FOLLOW_MODE":
-        // 成为房主
+        // 是否开启follow mode
         CurrentRoom.updateFollow(socket.id, payload.follow);
-        socket.broadcast.in(roomId).emit(UPDATE_USERS, CurrentRoom.activeUsers);
+        socket.to(roomId).emit(UPDATE_USERS, { users: CurrentRoom.activeUsers });
         break;
       case "KEEP_ROOM":
         // 有用户选择保留房间

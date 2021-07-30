@@ -96,9 +96,12 @@ class Room {
         this.users[sid] = user;
         return user;
     }
-    beHost(sid) {
-        const newUsers = Object.fromEntries(Object.entries(this.users).map(([key, user]) => {
-            return [key, { ...user, host: key == sid }];
+    beHost(sid, enable = true) {
+        const tmps = Object.entries(this.users);
+        const newUsers = enable ? Object.fromEntries(tmps.map(([key, user]) => {
+            return [key, { ...user, host: key == sid, follow: key !== sid }];
+        })) : Object.fromEntries(tmps.map(([key, user]) => {
+            return [key, { ...user, host: false, follow: false }];
         }));
         this.users = { ...newUsers };
     }
