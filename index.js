@@ -102,12 +102,12 @@ io.on("connection", async (socket) => {
       case "BE_HOST":
         // 成为房主
         CurrentRoom.beHost(socket.id, payload.enable);
-        socket.to(roomId).emit(UPDATE_USERS, { users: CurrentRoom.activeUsers });
+        io.in(roomId).emit(UPDATE_USERS, { users: CurrentRoom.activeUsers });
         break;
       case "FOLLOW_MODE":
         // 是否开启follow mode
         CurrentRoom.updateFollow(socket.id, payload.follow);
-        socket.to(roomId).emit(UPDATE_USERS, { users: CurrentRoom.activeUsers });
+        io.in(roomId).emit(UPDATE_USERS, { users: CurrentRoom.activeUsers });
         break;
       case "KEEP_ROOM":
         // 有用户选择保留房间
