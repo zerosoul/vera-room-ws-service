@@ -10,8 +10,6 @@ const {
   QUERY_ROOM_LIST,
 } = require("./graphqlClient");
 const getRoomInstance = require("./Room");
-
-
 const managementClient = new ManagementClient({
   userPoolId: "6034a31382f5d09e3b5a15fa",
   secret: process.env.AUTHING_SECRET,
@@ -33,9 +31,6 @@ const PORT = 4000;
 const CURRENT_PEERS = "CURRENT_PEERS_EVENT";
 const PEER_JOIN_EVENT = "PEER_JOIN_EVENT";
 const TAB_EVENT = "TAB_EVENT";
-const UPDATE_TABS = "UPDATE_TABS";
-// const CURRENT_TABS = "CURRENT_TABS";
-const UPDATE_ACTIVE_TAB = "UPDATE_ACTIVE_TAB";
 const UPDATE_USERS = "UPDATE_USERS";
 // const USERNAME_UPDATE_EVENT = 'USERNAME_UPDATE_EVENT'
 // const SOMEONE_INFO_UPDATE = 'SOMEONE_INFO_UPDATE'
@@ -81,11 +76,19 @@ io.on("connection", async (socket) => {
     const { cmd = "NEW_PEER", payload = null } = data;
     console.log({ payload });
     switch (cmd) {
-      case TAB_EVENT:
-        // 新开的tab
+      case TAB_EVENT: { // tab CRUD
         console.log("tab event");
         socket.broadcast.in(roomId).emit(TAB_EVENT, payload);
-        CurrentRoom.workspaceData = payload.data;
+        const wsData = payload.data;
+        CurrentRoom.workspaceData = wsData;
+        // 更新内存中的活动tab
+        const activeUrl = wsData.tabs[wsData.activeTabIndex]?.url;
+        console.log("update active url", activeUrl, socket.id);
+        if (activeUrl) {
+          CurrentRoom.updateActiveTab(socket.id, activeUrl);
+          socket.broadcast.in(roomId).emit(UPDATE_USERS, CurrentRoom.activeUsers);
+        }
+      }
         break;
       case "NEW_PEER":
         // add user
@@ -93,15 +96,17 @@ io.on("connection", async (socket) => {
         socket.broadcast.in(roomId).emit(PEER_JOIN_EVENT, CurrentRoom.addActiveUser(socket.id, currUser));
         // 更新自己的
         socket.emit(CURRENT_PEERS, { workspaceData: CurrentRoom.workspaceData, users: CurrentRoom.activeUsers, update: true });
+        //新人加入，更新user list
+        socket.broadcast.in(roomId).emit(UPDATE_USERS, CurrentRoom.activeUsers);
         break;
-      case UPDATE_TABS:
-        // 更新内存中的tab集合
-        console.log("UPDATE_TABS", payload.data);
-        CurrentRoom.tabs = payload.data;
+      case "BE_HOST":
+        // 成为房主
+        CurrentRoom.beHost(socket.id);
+        socket.broadcast.in(roomId).emit(UPDATE_USERS, CurrentRoom.activeUsers);
         break;
-      case UPDATE_ACTIVE_TAB:
-        // 更新内存活动tab
-        CurrentRoom.updateActiveTab(socket.id, payload.url);
+      case "FOLLOW_MODE":
+        // 成为房主
+        CurrentRoom.updateFollow(socket.id, payload.follow);
         socket.broadcast.in(roomId).emit(UPDATE_USERS, CurrentRoom.activeUsers);
         break;
       case "KEEP_ROOM":

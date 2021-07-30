@@ -96,6 +96,18 @@ class Room {
         this.users[sid] = user;
         return user;
     }
+    beHost(sid) {
+        const newUsers = Object.fromEntries(Object.entries(this.users).map(([key, user]) => {
+            return [key, { ...user, host: key == sid }];
+        }));
+        this.users = { ...newUsers };
+    }
+    updateFollow(sid, follow) {
+        if (this.users[sid]) {
+            this.users[sid].follow = follow;
+            this.users = { ...this.users };
+        }
+    }
     updateActiveTab(sid, url) {
         if (this.users[sid]) {
             this.users[sid].activePage = url;
