@@ -13,12 +13,13 @@ const Rooms = {};
 const filterMemberFields = (member = null) => {
     if (!member) return member;
     let keeps = ["id", "uid", "username", "avator", "creator", "photo"];
-    let filteredMember = Object.fromEntries(keeps.map(key => {
-
-        return [[key, member[key]]];
-    }));
-    return filteredMember;
-
+    let tmp = {};
+    Object.keys(member).forEach(k => {
+        if (keeps.includes(k) && typeof member[k] !== "undefined") {
+            tmp[k] = member[k];
+        }
+    });
+    return tmp;
 };
 class Room {
     constructor({ id, temp = "false", link = "" }) {
