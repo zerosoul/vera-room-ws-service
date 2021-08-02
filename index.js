@@ -61,7 +61,7 @@ io.on("connection", async (socket) => {
   let host = false;
   if (CurrentRoom.activeUsers.length == 0) {
     host = true;
-    currUser.host = true;
+    // currUser.host = true;
     // 临时room的创建者
     if (temp) {
       currUser.creator = true;
