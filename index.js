@@ -51,7 +51,7 @@ io.on("connection", async (socket) => {
     uid: userInfo.uid,
     photo: userInfo.photo,
     username: userInfo.username,
-    activePage: link
+    activeIndex: 0,
   };
   CurrentRoom.appendMember(member);
 
@@ -82,12 +82,8 @@ io.on("connection", async (socket) => {
         const wsData = payload.data;
         CurrentRoom.workspaceData = wsData;
         // 更新内存中的活动tab
-        const activeUrl = wsData.tabs[wsData.activeTabIndex]?.url;
-        console.log("update active url", activeUrl, socket.id);
-        if (activeUrl) {
-          CurrentRoom.updateActiveTab(socket.id, activeUrl);
-          socket.broadcast.in(roomId).emit(UPDATE_USERS, { users: CurrentRoom.activeUsers });
-        }
+        CurrentRoom.updateActiveTab(socket.id, wsData.activeTabIndex);
+        socket.broadcast.in(roomId).emit(UPDATE_USERS, { users: CurrentRoom.activeUsers });
       }
         break;
       case "NEW_PEER":

@@ -112,9 +112,9 @@ class Room {
             this.users = { ...this.users };
         }
     }
-    updateActiveTab(sid, url) {
+    updateActiveTab(sid, idx) {
         if (this.users[sid]) {
-            this.users[sid].activePage = url;
+            this.users[sid].activeIndex = idx;
             this.users = { ...this.users };
         }
     }
