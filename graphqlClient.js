@@ -24,16 +24,6 @@ const QUERY_ROOM = gql`
     }
   }
 `;
-const QUERY_PERSONAL_ROOM = gql`
-  query Room($creator: String!) {
-    portal_room(
-      where: { creator: { _eq: $creator }, personal: { _eq: true } }
-    ) {
-      id
-      personal
-    }
-  }
-`;
 const NEW_ROOM = gql`
 mutation NewRoom($creator: String!, $host: String!, $id: String!, $link: String!, $members: jsonb, $name: String!){
   insert_portal_room(objects: {creator: $creator, host: $host, id: $id, link: $link, members: $members, name: $name}) {
@@ -76,7 +66,6 @@ const gRequest = (query, payload) =>
 module.exports = {
   gRequest,
   QUERY_ROOM_LIST,
-  QUERY_PERSONAL_ROOM,
   QUERY_ROOM,
   UPDATE_ACTIVE,
   UPDATE_MEMBERS,

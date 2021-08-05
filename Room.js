@@ -1,6 +1,5 @@
 const {
     gRequest,
-    // QUERY_PERSONAL_ROOM,
     // QUERY_ROOM_LIST,
     QUERY_ROOM,
     UPDATE_ACTIVE,
