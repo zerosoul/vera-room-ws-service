@@ -80,6 +80,9 @@ io.on("connection", async (socket) => {
         console.log("tab event");
         socket.broadcast.in(roomId).emit(TAB_EVENT, payload);
         const wsData = payload.data;
+        // 更新内存中的活动tab
+        CurrentRoom.updateActiveTab(socket.id, wsData.activeTabIndex);
+        io.in(roomId).emit(UPDATE_USERS, { users: CurrentRoom.activeUsers });
         if (CurrentRoom.users[socket.id].host) {
           // 只有host才会更新activeIndex
           CurrentRoom.workspaceData = wsData;
@@ -87,9 +90,6 @@ io.on("connection", async (socket) => {
           wsData.activeTabIndex = CurrentRoom.workspaceData?.activeTabIndex;
           CurrentRoom.workspaceData = wsData;
         }
-        // 更新内存中的活动tab
-        CurrentRoom.updateActiveTab(socket.id, wsData.activeTabIndex);
-        io.in(roomId).emit(UPDATE_USERS, { users: CurrentRoom.activeUsers });
       }
         break;
       case "NEW_PEER":
