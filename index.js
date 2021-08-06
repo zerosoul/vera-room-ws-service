@@ -68,7 +68,8 @@ io.on("connection", async (socket) => {
     }
     CurrentRoom.addActiveUser(socket.id, currUser);
   }
-  socket.emit(CURRENT_PEERS, { users: CurrentRoom.activeUsers, host });
+  const { id, name, temp: isTemp, link: defaultLink, members } = CurrentRoom;
+  socket.emit(CURRENT_PEERS, { room: { id, name, temp: isTemp, link: defaultLink, members }, users: CurrentRoom.activeUsers, host });
 
   // new user
   socket.on("message", (data) => {

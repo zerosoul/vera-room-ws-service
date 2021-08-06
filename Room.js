@@ -23,6 +23,7 @@ const filterMemberFields = (member = null) => {
 class Room {
     constructor({ id, temp = "false", link = "" }) {
         this.id = id;
+        this.name = "";
         this.temp = temp === "false" ? false : true;
         this.link = link;
         this.active = false;
@@ -42,7 +43,8 @@ class Room {
         });
         console.log("data fetched", result.portal_room);
         if (result && result.portal_room[0]) {
-            const [{ active, members, link }] = result.portal_room;
+            const [{ active, members, link, name }] = result.portal_room;
+            this.name = name;
             this.link = link;
             this.active = active;
             this.members = members;
