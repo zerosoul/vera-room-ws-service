@@ -127,6 +127,7 @@ io.on("connection", async (socket) => {
     // ping timeout 先忽略？
     // if (reason == "ping timeout") return;
     CurrentRoom.removeActiveUser(socket.id);
+    socket.broadcast.in(roomId).emit(UPDATE_USERS, { users: CurrentRoom.activeUsers });
     io.in(roomId).emit(PEER_LEAVE_EVENT, currUser);
     socket.leave(roomId);
   });
