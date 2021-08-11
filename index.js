@@ -28,13 +28,12 @@ const io = socketIo(server, {
 });
 
 const PORT = 4000;
-const CURRENT_PEERS = "CURRENT_PEERS_EVENT";
-const PEER_JOIN_EVENT = "PEER_JOIN_EVENT";
+const CURRENT_USERS = "CURRENT_USERS";
+const JOIN_MEETING = "JOIN_MEETING";
 const TAB_EVENT = "TAB_EVENT";
 const UPDATE_USERS = "UPDATE_USERS";
-// const USERNAME_UPDATE_EVENT = 'USERNAME_UPDATE_EVENT'
-// const SOMEONE_INFO_UPDATE = 'SOMEONE_INFO_UPDATE'
-const PEER_LEAVE_EVENT = "PEER_LEAVE_EVENT";
+const USER_LEAVE = "USER_LEAVE";
+const USER_ENTER = "USER_ENTER";
 io.on("connection", async (socket) => {
   console.log(`${socket.id} connected`);
   // Join a room
@@ -52,29 +51,30 @@ io.on("connection", async (socket) => {
     photo: userInfo.photo,
     username: userInfo.username,
     activeIndex: 0,
+    // peerId 非空，则代表webrtc连接建立
+    peerId,
   };
   CurrentRoom.appendMember(member);
-
   // 当前用户
-  const currUser = { peerId, ...userInfo };
+  const currUser = { ...member };
   // 第一个进来，初始化房间人数为1
   let host = false;
   if (CurrentRoom.activeUsers.length == 0) {
     host = true;
-    // currUser.host = true;
+    currUser.meeting = true;
     // 临时room的创建者
     if (temp) {
       currUser.creator = true;
     }
-    CurrentRoom.addActiveUser(socket.id, currUser);
   }
+  CurrentRoom.addActiveUser(socket.id, currUser);
   const { id, name, temp: isTemp, link: defaultLink, members } = CurrentRoom;
-  socket.emit(CURRENT_PEERS, { room: { id, name, temp: isTemp, link: defaultLink, members }, users: CurrentRoom.activeUsers, host });
+  socket.emit(CURRENT_USERS, { room: { id, name, temp: isTemp, link: defaultLink, members }, users: CurrentRoom.activeUsers, host });
 
   // new user
   socket.on("message", (data) => {
     console.log(data);
-    const { cmd = "NEW_PEER", payload = null } = data;
+    const { cmd = USER_ENTER, payload = {} } = data;
     console.log({ payload });
     switch (cmd) {
       case TAB_EVENT: { // tab CRUD
@@ -82,8 +82,9 @@ io.on("connection", async (socket) => {
         socket.broadcast.in(roomId).emit(TAB_EVENT, payload);
         const wsData = payload.data;
         // 更新内存中的活动tab
-        CurrentRoom.updateActiveTab(socket.id, wsData.activeTabIndex);
+        CurrentRoom.updateUser(socket.id, { activeIndex: wsData.activeTabIndex });
         io.in(roomId).emit(UPDATE_USERS, { users: CurrentRoom.activeUsers });
+        console.log("current users", CurrentRoom.users);
         if (CurrentRoom.users[socket.id].host) {
           // 只有host才会更新activeIndex
           CurrentRoom.workspaceData = wsData;
@@ -93,12 +94,19 @@ io.on("connection", async (socket) => {
         }
       }
         break;
-      case "NEW_PEER":
+      case JOIN_MEETING:
+        // 建立webrtc连接，加入meeting
+        CurrentRoom.updateUser(socket.id, { meeting: true });
+        //加入meeting，更新user list
+        socket.broadcast.in(roomId).emit(JOIN_MEETING, CurrentRoom.users[socket.id]);
+        io.in(roomId).emit(UPDATE_USERS, { users: CurrentRoom.activeUsers });
+        break;
+      case USER_ENTER:
         // add user
         // 向房间内其它人广播新加入的用户
-        socket.broadcast.in(roomId).emit(PEER_JOIN_EVENT, CurrentRoom.addActiveUser(socket.id, currUser));
+        socket.broadcast.in(roomId).emit(USER_ENTER, CurrentRoom.addActiveUser(socket.id, currUser));
         // 更新自己的
-        socket.emit(CURRENT_PEERS, { workspaceData: CurrentRoom.workspaceData, users: CurrentRoom.activeUsers, update: true });
+        socket.emit(CURRENT_USERS, { workspaceData: CurrentRoom.workspaceData, users: CurrentRoom.activeUsers, update: true });
         //新人加入，更新user list
         socket.broadcast.in(roomId).emit(UPDATE_USERS, { users: CurrentRoom.activeUsers });
         break;
@@ -109,15 +117,17 @@ io.on("connection", async (socket) => {
         break;
       case "FOLLOW_MODE":
         // 是否开启follow mode
-        CurrentRoom.updateFollow(socket.id, payload.follow);
+        CurrentRoom.updateUser(socket.id, { follow: payload.follow });
         io.in(roomId).emit(UPDATE_USERS, { users: CurrentRoom.activeUsers });
+        break;
+      case "PEER_ID":
+        // 更新peerid
+        CurrentRoom.updateUser(socket.id, { peerId: payload.peerId });
+        // io.in(roomId).emit(UPDATE_USERS, { users: CurrentRoom.activeUsers });
         break;
       case "KEEP_ROOM":
         // 有用户选择保留房间
         CurrentRoom.addKeepUser(socket.id);
-        break;
-
-      default:
         break;
     }
   });
@@ -128,7 +138,7 @@ io.on("connection", async (socket) => {
     // if (reason == "ping timeout") return;
     CurrentRoom.removeActiveUser(socket.id);
     socket.broadcast.in(roomId).emit(UPDATE_USERS, { users: CurrentRoom.activeUsers });
-    io.in(roomId).emit(PEER_LEAVE_EVENT, currUser);
+    io.in(roomId).emit(USER_LEAVE, currUser);
     socket.leave(roomId);
   });
 });
@@ -162,7 +172,6 @@ app.get("/members/authing/:username", async (req, res) => {
     let userIds = users.map((u) => u.uid);
     let chunks = arrayChunks(userIds, 10);
     let results = await Promise.all(chunks.map((ids) => {
-
       return managementClient.users.getUdfValueBatch(
         ids
       );
@@ -175,7 +184,6 @@ app.get("/members/authing/:username", async (req, res) => {
   } catch (error) {
     console.log(error);
   }
-
   console.log({ result, users });
   return res.json({
     data: users.map((u) => ({ ...u, traceId: udfs[u.uid].notification || "" })),

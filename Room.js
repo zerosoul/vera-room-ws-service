@@ -107,16 +107,9 @@ class Room {
         }));
         this.users = { ...newUsers };
     }
-    updateFollow(sid, follow) {
+    updateUser(sid, params) {
         if (this.users[sid]) {
-            this.users[sid].follow = follow;
-            this.users = { ...this.users };
-        }
-    }
-    updateActiveTab(sid, idx) {
-        if (this.users[sid]) {
-            this.users[sid].activeIndex = idx;
-            this.users = { ...this.users };
+            this.users[sid] = { ...this.users[sid], ...params };
         }
     }
     addKeepUser(sid) {
