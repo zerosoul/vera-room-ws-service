@@ -58,10 +58,7 @@ io.on("connection", async (socket) => {
   // 当前用户
   const currUser = { ...member };
   // 第一个进来，初始化房间人数为1
-  let host = false;
   if (CurrentRoom.activeUsers.length == 0) {
-    host = true;
-    currUser.meeting = true;
     // 临时room的创建者
     if (temp) {
       currUser.creator = true;
@@ -69,7 +66,7 @@ io.on("connection", async (socket) => {
   }
   CurrentRoom.addActiveUser(socket.id, currUser);
   const { id, name, temp: isTemp, link: defaultLink, members } = CurrentRoom;
-  socket.emit(CURRENT_USERS, { room: { id, name, temp: isTemp, link: defaultLink, members }, users: CurrentRoom.activeUsers, host });
+  socket.emit(CURRENT_USERS, { room: { id, name, temp: isTemp, link: defaultLink, members }, users: CurrentRoom.activeUsers });
 
   // new user
   socket.on("message", (data) => {
@@ -122,8 +119,12 @@ io.on("connection", async (socket) => {
         break;
       case "PEER_ID":
         // 更新peerid
-        CurrentRoom.updateUser(socket.id, { peerId: payload.peerId });
-        // io.in(roomId).emit(UPDATE_USERS, { users: CurrentRoom.activeUsers });
+        if (CurrentRoom.activeUsers.filter(u => !!u.meeting).length == 0) {
+          CurrentRoom.updateUser(socket.id, { peerId: payload.peerId, meeting: true });
+        } else {
+          CurrentRoom.updateUser(socket.id, { peerId: payload.peerId });
+        }
+        io.in(roomId).emit(UPDATE_USERS, { users: CurrentRoom.activeUsers });
         break;
       case "KEEP_ROOM":
         // 有用户选择保留房间
