@@ -91,11 +91,23 @@ io.on("connection", async (socket) => {
         }
       }
         break;
-      case JOIN_MEETING:
+      case JOIN_MEETING: {
         // 建立webrtc连接，加入meeting
         CurrentRoom.updateUser(socket.id, { meeting: true });
+        // 只通知meeting中的用户
+        let notifyUsers = CurrentRoom.activeUsers.filter(u => u.meeting && u.id !== socket.id);
+        notifyUsers.forEach(user => {
+          socket.broadcast.to(user.id).emit(JOIN_MEETING, CurrentRoom.users[socket.id]);
+        });
         //加入meeting，更新user list
-        socket.broadcast.in(roomId).emit(JOIN_MEETING, CurrentRoom.users[socket.id]);
+        // socket.broadcast.in(roomId).emit(JOIN_MEETING, CurrentRoom.users[socket.id]);
+        io.in(roomId).emit(UPDATE_USERS, { users: CurrentRoom.activeUsers });
+      }
+        break;
+      case "LEAVE_MEETING":
+        // 离开meeting
+        CurrentRoom.updateUser(socket.id, { meeting: false });
+        //离开meeting，更新user list
         io.in(roomId).emit(UPDATE_USERS, { users: CurrentRoom.activeUsers });
         break;
       case USER_ENTER:
@@ -119,12 +131,10 @@ io.on("connection", async (socket) => {
         break;
       case "PEER_ID":
         // 更新peerid
-        if (CurrentRoom.activeUsers.filter(u => !!u.meeting).length == 0) {
-          CurrentRoom.updateUser(socket.id, { peerId: payload.peerId, meeting: true });
-        } else {
-          CurrentRoom.updateUser(socket.id, { peerId: payload.peerId });
-        }
-        io.in(roomId).emit(UPDATE_USERS, { users: CurrentRoom.activeUsers });
+        CurrentRoom.updateUser(socket.id, { peerId: payload.peerId });
+        // 更新自己的
+        socket.emit(CURRENT_USERS, { workspaceData: CurrentRoom.workspaceData, users: CurrentRoom.activeUsers, update: true });
+        // io.in(roomId).emit(UPDATE_USERS, { users: CurrentRoom.activeUsers });
         break;
       case "KEEP_ROOM":
         // 有用户选择保留房间
