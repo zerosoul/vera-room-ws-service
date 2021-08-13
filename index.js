@@ -76,13 +76,14 @@ io.on("connection", async (socket) => {
     switch (cmd) {
       case TAB_EVENT: { // tab CRUD
         console.log("tab event");
-        socket.broadcast.in(roomId).emit(TAB_EVENT, payload);
         const wsData = payload.data;
         // 更新内存中的活动tab
         CurrentRoom.updateUser(socket.id, { activeIndex: wsData.activeTabIndex });
         io.in(roomId).emit(UPDATE_USERS, { users: CurrentRoom.activeUsers });
+        const fromHost = CurrentRoom.users[socket.id].host;
+        socket.broadcast.in(roomId).emit(TAB_EVENT, { data: payload.data, fromHost });
         console.log("current users", CurrentRoom.users);
-        if (CurrentRoom.users[socket.id].host) {
+        if (fromHost) {
           // 只有host才会更新activeIndex
           CurrentRoom.workspaceData = wsData;
         } else {
