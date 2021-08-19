@@ -66,7 +66,7 @@ io.on("connection", async (socket) => {
   }
   CurrentRoom.addActiveUser(socket.id, currUser);
   const { id, name, temp: isTemp, link: defaultLink, members } = CurrentRoom;
-  socket.emit(CURRENT_USERS, { room: { id, name, temp: isTemp, link: defaultLink, members }, users: CurrentRoom.activeUsers });
+  socket.emit(CURRENT_USERS, { room: { id, name, temp: isTemp, link: defaultLink, members }, workspaceData: CurrentRoom.workspaceData, users: CurrentRoom.activeUsers });
 
   // new user
   socket.on("message", (data) => {
@@ -140,6 +140,10 @@ io.on("connection", async (socket) => {
       case "KEEP_ROOM":
         // 有用户选择保留房间
         CurrentRoom.addKeepUser(socket.id);
+        break;
+      case "SYNC_URL":
+        //同步url的更新
+        socket.broadcast.in(roomId).emit("SYNC_URL", { url: payload.url });
         break;
     }
   });
