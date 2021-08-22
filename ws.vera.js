@@ -117,7 +117,7 @@ const initVeraSocket = async (io, socket, params = {}) => {
                 break;
         }
         // 广播给所有的zoom socket 连接
-        io.in(`${roomId}_zoom`).emit("ZOOM_VERA_DATA", { tabs: CurrentRoom.workspaceData, users: CurrentRoom.activeUsers });
+        io.in(`${roomId}_zoom`).emit("ZOOM_VERA_DATA", { tabs: CurrentRoom.workspaceData?.tabs || [], users: CurrentRoom.activeUsers });
 
     });
     // Leave the room if the user closes the socket
