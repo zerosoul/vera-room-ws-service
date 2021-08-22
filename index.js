@@ -70,6 +70,7 @@ app.get("/zoom/user/:uid", async (req, res) => {
   let room_id = null;
   console.log("get zoom id with uid");
   Object.entries(Rooms).forEach(([rid, room]) => {
+    if (!room) return;
     console.log("get zoom id with uid:", rid, room.activeUsers);
     let us = room.activeUsers;
     if (us.findIndex((u) => u.uid == uid) > -1) {
