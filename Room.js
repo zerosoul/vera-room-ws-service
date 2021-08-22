@@ -33,6 +33,7 @@ class Room {
         this.keepUsers = [];
     }
     get activeUsers() {
+        console.log("current users", this.users);
         return Object.values(this.users);
     }
     async fetchData() {
@@ -94,6 +95,7 @@ class Room {
         }
     }
     addActiveUser(sid, user) {
+        console.log("add active user", user);
         // 新增活跃用户
         this.users[sid] = user;
         return user;
@@ -148,3 +150,4 @@ const getRoomInstance = async ({ id, temp, link }) => {
     return Rooms[id];
 };
 module.exports = getRoomInstance;
+module.exports.Rooms = Rooms;
