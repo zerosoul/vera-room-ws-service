@@ -115,9 +115,15 @@ const initVeraSocket = async (io, socket, params = {}) => {
                 //同步url的更新
                 socket.broadcast.in(roomId).emit("SYNC_URL", { url: payload.url });
                 break;
+            case "RAW_TABS": {
+                //更新原始tab list信息
+                const { tabs } = payload;
+                CurrentRoom.tabs = tabs;
+            }
+                break;
         }
         // 广播给所有的zoom socket 连接
-        io.in(`${roomId}_zoom`).emit("ZOOM_VERA_DATA", { tabs: CurrentRoom.workspaceData?.tabs || [], users: CurrentRoom.activeUsers });
+        io.in(`${roomId}_zoom`).emit("ZOOM_VERA_DATA", { tabs: CurrentRoom.tabs || [], users: CurrentRoom.activeUsers });
     });
     // Leave the room if the user closes the socket
     socket.on("disconnect", (reason) => {

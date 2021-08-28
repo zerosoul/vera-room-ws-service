@@ -29,6 +29,7 @@ class Room {
         this.active = false;
         this.members = null;
         this.users = {};
+        this.tabs = null;
         this.workspaceData = null;
         this.keepUsers = [];
     }
