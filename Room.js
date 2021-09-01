@@ -45,11 +45,12 @@ class Room {
         });
         console.log("data fetched", result.portal_room);
         if (result && result.portal_room[0]) {
-            const [{ active, members, link, name }] = result.portal_room;
+            const [{ active, members, link, name, windows }] = result.portal_room;
             this.name = name;
             this.link = link;
             this.active = active;
             this.members = members;
+            this.windows = windows;
             // 激活当前房间
             if (!active) {
                 this.setActive();

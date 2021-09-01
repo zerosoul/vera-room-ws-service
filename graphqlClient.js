@@ -21,6 +21,17 @@ const QUERY_ROOM = gql`
       link
       name
       members
+      windows {
+        id
+        title
+        room
+        tabs {
+          title
+          id
+          url
+          icon
+        }
+      }
     }
   }
 `;
@@ -56,6 +67,24 @@ const UPDATE_MEMBERS = gql`
     }
   }
 `;
+const DELETE_TABS = gql`
+  mutation DeleteTabs($wid: uuid!) {
+    delete_portal_tab(where: {window: {_eq: $wid}}){
+      returning {
+        id
+      }
+    }
+  }
+`;
+const INSERT_TABS = gql`
+  mutation InsertTabs($tabs: [portal_tab_insert_input!]!) {
+    insert_portal_tab(objects: $tabs){
+      returning {
+        id
+      }
+    }
+  }
+`;
 const requestHeaders = {
   "content-type": "application/json",
   "x-hasura-admin-secret": "tristan@privoce",
@@ -69,5 +98,7 @@ module.exports = {
   QUERY_ROOM,
   UPDATE_ACTIVE,
   UPDATE_MEMBERS,
-  NEW_ROOM
+  NEW_ROOM,
+  DELETE_TABS,
+  INSERT_TABS
 };

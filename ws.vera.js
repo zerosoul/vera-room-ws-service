@@ -1,5 +1,10 @@
 const getRoomInstance = require("./Room");
-
+const {
+    gRequest,
+    // QUERY_ROOM_LIST,
+    INSERT_TABS,
+    DELETE_TABS
+} = require("./graphqlClient");
 const CURRENT_USERS = "CURRENT_USERS";
 const JOIN_MEETING = "JOIN_MEETING";
 const TAB_EVENT = "TAB_EVENT";
@@ -8,9 +13,9 @@ const USER_LEAVE = "USER_LEAVE";
 const USER_ENTER = "USER_ENTER";
 
 const initVeraSocket = async (io, socket, params = {}) => {
-    const { roomId, winId, temp = false, link, peerId, userInfo } = params;
+    const { roomId, winId = "", temp = false, link, peerId, userInfo } = params;
     if (!roomId) return;
-    socket.join(roomId);
+    socket.join(`${roomId}-${winId}`);
     // room factory
     const CurrentRoom = await getRoomInstance({ id: roomId, temp, link });
     console.log({ CurrentRoom, roomId, winId, userInfo });
@@ -121,6 +126,24 @@ const initVeraSocket = async (io, socket, params = {}) => {
                 CurrentRoom.tabs = tabs;
             }
                 break;
+            case "KEEP_TABS": {
+                //更新覆盖数据库里的tabs
+                const { tabs } = payload;
+                if (winId.endsWith("_temp")) {
+                    // 临时window
+                } else {
+                    // 直接覆盖式更新
+                    gRequest(DELETE_TABS, { wid: winId }).then(() => {
+                        console.log("insert new tabs");
+                        // 删除成功
+                        console.log("insert new tabs", tabs);
+                        gRequest(INSERT_TABS, { tabs }).then((wtf) => {
+                            console.log(wtf);
+                        });
+                    });
+                }
+            }
+                break;
         }
         // 广播给所有的zoom socket 连接
         io.in(`${roomId}_zoom`).emit("ZOOM_VERA_DATA", { tabs: CurrentRoom.tabs || [], users: CurrentRoom.activeUsers });
@@ -131,6 +154,10 @@ const initVeraSocket = async (io, socket, params = {}) => {
         // ping timeout 先忽略？
         // if (reason == "ping timeout") return;
         CurrentRoom.removeActiveUser(socket.id);
+        // if(CurrentRoom.windowId){
+
+
+        // }
         socket.broadcast.in(roomId).emit(UPDATE_USERS, { users: CurrentRoom.activeUsers });
         io.in(roomId).emit(USER_LEAVE, currUser);
         socket.leave(roomId);
