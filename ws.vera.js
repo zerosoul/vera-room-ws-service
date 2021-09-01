@@ -15,7 +15,8 @@ const USER_ENTER = "USER_ENTER";
 const initVeraSocket = async (io, socket, params = {}) => {
     const { roomId, winId = "", temp = false, link, peerId, userInfo } = params;
     if (!roomId) return;
-    socket.join(`${roomId}-${winId}`);
+    const socketRoom = `${roomId}-${winId}`;
+    socket.join(socketRoom);
     // room factory
     const CurrentRoom = await getRoomInstance({ id: roomId, temp, link });
     console.log({ CurrentRoom, roomId, winId, userInfo });
@@ -54,9 +55,9 @@ const initVeraSocket = async (io, socket, params = {}) => {
                 const wsData = payload.data;
                 // 更新内存中的活动tab
                 CurrentRoom.updateUser(socket.id, { activeIndex: wsData.activeTabIndex });
-                io.in(roomId).emit(UPDATE_USERS, { users: CurrentRoom.activeUsers });
+                io.in(socketRoom).emit(UPDATE_USERS, { users: CurrentRoom.activeUsers });
                 const fromHost = CurrentRoom.users[socket.id].host;
-                socket.broadcast.in(roomId).emit(TAB_EVENT, { data: payload.data, fromHost });
+                socket.broadcast.in(socketRoom).emit(TAB_EVENT, { data: payload.data, fromHost });
                 console.log("current users", CurrentRoom.users);
                 if (fromHost) {
                     // 只有host才会更新activeIndex
@@ -76,41 +77,41 @@ const initVeraSocket = async (io, socket, params = {}) => {
                     socket.broadcast.to(user.id).emit(JOIN_MEETING, CurrentRoom.users[socket.id]);
                 });
                 //加入meeting，更新user list
-                // socket.broadcast.in(roomId).emit(JOIN_MEETING, CurrentRoom.users[socket.id]);
-                io.in(roomId).emit(UPDATE_USERS, { users: CurrentRoom.activeUsers });
+                // socket.broadcast.in(socketRoom).emit(JOIN_MEETING, CurrentRoom.users[socket.id]);
+                io.in(socketRoom).emit(UPDATE_USERS, { users: CurrentRoom.activeUsers });
             }
                 break;
             case "LEAVE_MEETING":
                 // 离开meeting
                 CurrentRoom.updateUser(socket.id, { meeting: false });
                 //离开meeting，更新user list
-                io.in(roomId).emit(UPDATE_USERS, { users: CurrentRoom.activeUsers });
+                io.in(socketRoom).emit(UPDATE_USERS, { users: CurrentRoom.activeUsers });
                 break;
             case USER_ENTER:
                 // add user
                 // 向房间内其它人广播新加入的用户
-                socket.broadcast.in(roomId).emit(USER_ENTER, CurrentRoom.addActiveUser(socket.id, currUser));
+                socket.broadcast.in(socketRoom).emit(USER_ENTER, CurrentRoom.addActiveUser(socket.id, currUser));
                 // 更新自己的
                 socket.emit(CURRENT_USERS, { workspaceData: CurrentRoom.workspaceData, users: CurrentRoom.activeUsers, update: true });
                 //新人加入，更新user list
-                socket.broadcast.in(roomId).emit(UPDATE_USERS, { users: CurrentRoom.activeUsers });
+                socket.broadcast.in(socketRoom).emit(UPDATE_USERS, { users: CurrentRoom.activeUsers });
                 break;
             case "BE_HOST":
                 // 成为房主
                 CurrentRoom.beHost(socket.id, payload.enable);
-                io.in(roomId).emit(UPDATE_USERS, { users: CurrentRoom.activeUsers });
+                io.in(socketRoom).emit(UPDATE_USERS, { users: CurrentRoom.activeUsers });
                 break;
             case "FOLLOW_MODE":
                 // 是否开启follow mode
                 CurrentRoom.updateUser(socket.id, { follow: payload.follow });
-                io.in(roomId).emit(UPDATE_USERS, { users: CurrentRoom.activeUsers });
+                io.in(socketRoom).emit(UPDATE_USERS, { users: CurrentRoom.activeUsers });
                 break;
             case "PEER_ID":
                 // 更新peerid
                 CurrentRoom.updateUser(socket.id, { peerId: payload.peerId });
                 // 更新自己的
                 socket.emit(CURRENT_USERS, { workspaceData: CurrentRoom.workspaceData, users: CurrentRoom.activeUsers, update: true });
-                // io.in(roomId).emit(UPDATE_USERS, { users: CurrentRoom.activeUsers });
+                // io.in(socketRoom).emit(UPDATE_USERS, { users: CurrentRoom.activeUsers });
                 break;
             case "KEEP_ROOM":
                 // 有用户选择保留房间
@@ -118,7 +119,7 @@ const initVeraSocket = async (io, socket, params = {}) => {
                 break;
             case "SYNC_URL":
                 //同步url的更新
-                socket.broadcast.in(roomId).emit("SYNC_URL", { url: payload.url });
+                socket.broadcast.in(socketRoom).emit("SYNC_URL", { url: payload.url });
                 break;
             case "RAW_TABS": {
                 //更新原始tab list信息
@@ -158,9 +159,9 @@ const initVeraSocket = async (io, socket, params = {}) => {
 
 
         // }
-        socket.broadcast.in(roomId).emit(UPDATE_USERS, { users: CurrentRoom.activeUsers });
-        io.in(roomId).emit(USER_LEAVE, currUser);
-        socket.leave(roomId);
+        socket.broadcast.in(socketRoom).emit(UPDATE_USERS, { users: CurrentRoom.activeUsers });
+        io.in(socketRoom).emit(USER_LEAVE, currUser);
+        socket.leave(socketRoom);
     });
 };
 module.exports = { initVeraSocket };
