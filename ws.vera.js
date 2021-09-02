@@ -138,7 +138,11 @@ const initVeraSocket = async (io, socket, params = {}) => {
                         console.log("insert new tabs");
                         // 删除成功
                         console.log("insert new tabs", tabs);
-                        gRequest(INSERT_TABS, { tabs }).then((wtf) => {
+                        gRequest(INSERT_TABS, {
+                            tabs: tabs.map(t => {
+                                return { ...t, window: winId };
+                            })
+                        }).then((wtf) => {
                             console.log(wtf);
                         });
                     });
