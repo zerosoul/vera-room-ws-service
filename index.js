@@ -89,6 +89,19 @@ app.get("/zoom/user/:uid", async (req, res) => {
     room_id
   });
 });
+app.get("/webrowse/user/active/:rid", async (req, res) => {
+  const { rid } = req.params;
+  if (!rid) return res.json(null);
+  const room = Rooms[rid];
+  if (!room) {
+    return res.json({
+      users: []
+    });
+  }
+  return res.json({
+    users: room.activeUsers
+  });
+});
 app.get("/members/authing/:username", async (req, res) => {
   console.log("rrrr");
   const { username } = req.params;
