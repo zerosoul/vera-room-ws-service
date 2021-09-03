@@ -1,14 +1,21 @@
 const getRoomInstance = require("./Room");
+const {
+    gRequest,
+    // QUERY_ROOM_LIST,
+    INSERT_TABS,
+    DELETE_TABS
+} = require("./graphqlClient");
 const CURRENT_USERS = "CURRENT_USERS";
 const JOIN_MEETING = "JOIN_MEETING";
+const TAB_EVENT = "TAB_EVENT";
 const UPDATE_USERS = "UPDATE_USERS";
 const USER_LEAVE = "USER_LEAVE";
 const USER_ENTER = "USER_ENTER";
 
-const initVeraSocket = async (io, socket, params = {}) => {
-    const { roomId, winId = "", temp = false, link, peerId, userInfo } = params;
+const initWebrowseSocket = async (io, socket, params = {}) => {
+    const { roomId, winId = "", temp = false, link, userInfo } = params;
     if (!roomId) return;
-    const socketRoom = `${roomId}`;
+    const socketRoom = `${roomId}-${winId}`;
     socket.join(socketRoom);
     // room factory
     const CurrentRoom = await getRoomInstance({ id: roomId, temp, link });
@@ -21,7 +28,6 @@ const initVeraSocket = async (io, socket, params = {}) => {
         username: userInfo.username,
         activeIndex: 0,
         // peerId 非空，则代表webrtc连接建立
-        peerId,
     };
     CurrentRoom.appendMember(member);
     // 当前用户
@@ -43,6 +49,24 @@ const initVeraSocket = async (io, socket, params = {}) => {
         const { cmd = USER_ENTER, payload = {} } = data;
         console.log({ payload });
         switch (cmd) {
+            case TAB_EVENT: { // tab CRUD
+                console.log("tab event");
+                const wsData = payload.data;
+                // 更新内存中的活动tab
+                CurrentRoom.updateUser(socket.id, { activeIndex: wsData.activeTabIndex });
+                io.in(socketRoom).emit(UPDATE_USERS, { users: CurrentRoom.activeUsers });
+                const fromHost = CurrentRoom.users[socket.id].host;
+                socket.broadcast.in(socketRoom).emit(TAB_EVENT, { data: payload.data, fromHost });
+                console.log("current users", CurrentRoom.users);
+                if (fromHost) {
+                    // 只有host才会更新activeIndex
+                    CurrentRoom.workspaceData = wsData;
+                } else {
+                    wsData.activeTabIndex = CurrentRoom.workspaceData?.activeTabIndex;
+                    CurrentRoom.workspaceData = wsData;
+                }
+            }
+                break;
             case JOIN_MEETING: {
                 // 建立webrtc连接，加入meeting
                 CurrentRoom.updateUser(socket.id, { meeting: true });
@@ -71,6 +95,16 @@ const initVeraSocket = async (io, socket, params = {}) => {
                 //新人加入，更新user list
                 socket.broadcast.in(socketRoom).emit(UPDATE_USERS, { users: CurrentRoom.activeUsers });
                 break;
+            case "BE_HOST":
+                // 成为房主
+                CurrentRoom.beHost(socket.id, payload.enable);
+                io.in(socketRoom).emit(UPDATE_USERS, { users: CurrentRoom.activeUsers });
+                break;
+            case "FOLLOW_MODE":
+                // 是否开启follow mode
+                CurrentRoom.updateUser(socket.id, { follow: payload.follow });
+                io.in(socketRoom).emit(UPDATE_USERS, { users: CurrentRoom.activeUsers });
+                break;
             case "PEER_ID":
                 // 更新peerid
                 CurrentRoom.updateUser(socket.id, { peerId: payload.peerId });
@@ -78,11 +112,41 @@ const initVeraSocket = async (io, socket, params = {}) => {
                 socket.emit(CURRENT_USERS, { workspaceData: CurrentRoom.workspaceData, users: CurrentRoom.activeUsers, update: true });
                 // io.in(socketRoom).emit(UPDATE_USERS, { users: CurrentRoom.activeUsers });
                 break;
-            case "SYNC_URL":
-                //同步url的更新
-                socket.broadcast.in(socketRoom).emit("SYNC_URL", { url: payload.url });
+            case "KEEP_ROOM":
+                // 有用户选择保留房间
+                CurrentRoom.addKeepUser(socket.id);
+                break;
+            case "RAW_TABS": {
+                //更新原始tab list信息
+                const { tabs } = payload;
+                CurrentRoom.tabs = tabs;
+            }
+                break;
+            case "KEEP_TABS": {
+                //更新覆盖数据库里的tabs
+                const { tabs } = payload;
+                if (winId.endsWith("_temp")) {
+                    // 临时window
+                } else {
+                    // 直接覆盖式更新
+                    gRequest(DELETE_TABS, { wid: winId }).then(() => {
+                        console.log("insert new tabs");
+                        // 删除成功
+                        console.log("insert new tabs", tabs);
+                        gRequest(INSERT_TABS, {
+                            tabs: tabs.map(t => {
+                                return { ...t, window: winId };
+                            })
+                        }).then((wtf) => {
+                            console.log(wtf);
+                        });
+                    });
+                }
+            }
                 break;
         }
+        // 广播给所有的zoom socket 连接
+        io.in(`${roomId}_zoom`).emit("ZOOM_VERA_DATA", { tabs: CurrentRoom.tabs || [], users: CurrentRoom.activeUsers });
     });
     // Leave the room if the user closes the socket
     socket.on("disconnect", (reason) => {
@@ -99,4 +163,4 @@ const initVeraSocket = async (io, socket, params = {}) => {
         socket.leave(socketRoom);
     });
 };
-module.exports = { initVeraSocket };
+module.exports = { initWebrowseSocket };

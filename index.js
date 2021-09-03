@@ -10,6 +10,7 @@ const {
   QUERY_ROOM_LIST,
 } = require("./graphqlClient");
 const { initVeraSocket } = require("./ws.vera");
+const { initWebrowseSocket } = require("./ws.webrowse");
 const { initZoomVeraSocket } = require("./ws.zoom.vera");
 const { Rooms } = require("./Room");
 
@@ -44,6 +45,13 @@ io.on("connection", async (socket) => {
         roomId, winId, temp = false, link, peerId, ...userInfo
       } = rest;
       initVeraSocket(io, socket, { roomId, winId, temp, link, peerId, userInfo });
+    }
+      break;
+    case "WEBROWSE": {
+      const {
+        roomId, winId, temp = false, link, ...userInfo
+      } = rest;
+      initWebrowseSocket(io, socket, { roomId, winId, temp, link, userInfo });
     }
       break;
     case "ZOOM_VERA": {
