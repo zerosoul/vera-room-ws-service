@@ -144,6 +144,11 @@ const initWebrowseSocket = async (io, socket, params = {}) => {
                 }
             }
                 break;
+            case "END_ALL": {
+                //结束房间内的所有连接
+                io.in(socketRoom).disconnectSockets(true);
+            }
+                break;
         }
         // 广播给所有的zoom socket 连接
         io.in(`${roomId}_zoom`).emit("ZOOM_VERA_DATA", { tabs: CurrentRoom.tabs || [], users: CurrentRoom.activeUsers });
