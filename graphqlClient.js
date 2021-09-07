@@ -15,6 +15,7 @@ const QUERY_ROOM_LIST = gql`
 const QUERY_ROOM = gql`
   query Room($id: String!) {
     portal_room(where: { id: { _eq: $id } }) {
+      creator
       personal
       active
       id
@@ -35,14 +36,40 @@ const QUERY_ROOM = gql`
     }
   }
 `;
+const WINDOW_LIST = gql`
+  query Windows($room: String!) {
+    portal_window(where: {room: {_eq: $room}}) {
+      id
+      title
+      room
+      created_at
+      tabs {
+        id
+        icon
+        title
+        url
+      }
+    }
+  }
+`;
 const NEW_ROOM = gql`
-mutation NewRoom($creator: String!, $host: String!, $id: String!, $link: String!, $members: jsonb, $name: String!){
-  insert_portal_room(objects: {creator: $creator, host: $host, id: $id, link: $link, members: $members, name: $name}) {
+mutation NewRoom($creator: String, $host: String!, $id: String!, $link: String, $members: jsonb, $name: String){
+  insert_portal_room(objects: {creator: $creator, host: $host, id: $id, link: $link, members: $members, name: $name}, on_conflict: {constraint: room_pkey, update_columns: [host,name,link]})  {
     returning {
       id
       created_at
     }
     affected_rows
+  }
+}
+`;
+const NEW_WINDOW = gql`
+mutation NewRoom($room: String!, $title: String!){
+  insert_portal_window(objects: {room: $room, title: $title}) {
+    returning {
+      id
+      created_at
+    }
   }
 }
 `;
@@ -95,10 +122,12 @@ const gRequest = (query, payload) =>
 module.exports = {
   gRequest,
   QUERY_ROOM_LIST,
+  WINDOW_LIST,
   QUERY_ROOM,
   UPDATE_ACTIVE,
   UPDATE_MEMBERS,
   NEW_ROOM,
+  NEW_WINDOW,
   DELETE_TABS,
   INSERT_TABS
 };

@@ -6,13 +6,13 @@ const USER_LEAVE = "USER_LEAVE";
 const USER_ENTER = "USER_ENTER";
 
 const initVeraSocket = async (io, socket, params = {}) => {
-    const { roomId, winId = "", temp = false, link, peerId, userInfo } = params;
+    const { roomId, temp = false, link, peerId, userInfo } = params;
     if (!roomId) return;
     const socketRoom = `${roomId}`;
     socket.join(socketRoom);
     // room factory
     const CurrentRoom = await getRoomInstance({ id: roomId, temp, link });
-    console.log({ CurrentRoom, roomId, winId, userInfo });
+    console.log({ CurrentRoom, roomId, userInfo });
     // 当前暂存内存中的user，id指的是当前ws连接的id，uid指的是authing的uid，和authing保持一致
     const member = {
         id: socket.id,

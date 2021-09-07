@@ -3,6 +3,8 @@ const {
     gRequest,
     // QUERY_ROOM_LIST,
     INSERT_TABS,
+    NEW_ROOM,
+    NEW_WINDOW,
     DELETE_TABS
 } = require("./graphqlClient");
 const CURRENT_USERS = "CURRENT_USERS";
@@ -13,12 +15,12 @@ const USER_LEAVE = "USER_LEAVE";
 const USER_ENTER = "USER_ENTER";
 
 const initWebrowseSocket = async (io, socket, params = {}) => {
-    const { roomId, winId = "", temp = false, link, userInfo } = params;
-    if (!roomId) return;
-    const socketRoom = `${roomId}-${winId}`;
+    const { roomId, winId = "", temp = false, userInfo } = params;
+    if (!winId) return;
+    const socketRoom = `${winId}`;
     socket.join(socketRoom);
     // room factory
-    const CurrentRoom = await getRoomInstance({ id: roomId, temp, link });
+    const CurrentRoom = await getRoomInstance({ id: roomId, temp });
     console.log({ CurrentRoom, roomId, winId, userInfo });
     // 当前暂存内存中的user，id指的是当前ws连接的id，uid指的是authing的uid，和authing保持一致
     const member = {
@@ -34,8 +36,8 @@ const initWebrowseSocket = async (io, socket, params = {}) => {
     const currUser = { ...member };
     // 第一个进来，初始化房间人数为1
     if (CurrentRoom.activeUsers.length == 0) {
-        // 临时room的创建者
-        if (temp) {
+        // 临时room的创建者 or 本身就是该room的创建者 or 个人room
+        if (temp || (currUser.uid && CurrentRoom.creator == currUser.username) || (currUser.uid == CurrentRoom.id)) {
             currUser.creator = true;
         }
     }
@@ -52,19 +54,17 @@ const initWebrowseSocket = async (io, socket, params = {}) => {
             case TAB_EVENT: { // tab CRUD
                 console.log("tab event");
                 const wsData = payload.data;
-                // 更新内存中的活动tab
+                // 更新内存中对应用户的活动tab
                 CurrentRoom.updateUser(socket.id, { activeIndex: wsData.activeTabIndex });
                 io.in(socketRoom).emit(UPDATE_USERS, { users: CurrentRoom.activeUsers });
-                const fromHost = CurrentRoom.users[socket.id].host;
-                socket.broadcast.in(socketRoom).emit(TAB_EVENT, { data: payload.data, fromHost });
-                console.log("current users", CurrentRoom.users);
-                if (fromHost) {
-                    // 只有host才会更新activeIndex
-                    CurrentRoom.workspaceData = wsData;
-                } else {
-                    wsData.activeTabIndex = CurrentRoom.workspaceData?.activeTabIndex;
-                    CurrentRoom.workspaceData = wsData;
+                // 广播最新的 workspace 数据
+                // 只有host才会更新activeIndex
+                const isHost = CurrentRoom.users[socket.id].host;
+                if (!isHost) {
+                    delete wsData.activeTabIndex;
                 }
+                socket.broadcast.in(socketRoom).emit(TAB_EVENT, { data: wsData });
+                CurrentRoom.workspaceData = { ...CurrentRoom.workspaceData, ...wsData };
             }
                 break;
             case JOIN_MEETING: {
@@ -127,6 +127,35 @@ const initWebrowseSocket = async (io, socket, params = {}) => {
                 const { tabs } = payload;
                 if (winId.endsWith("_temp")) {
                     // 临时window
+                    if (roomId == currUser.uid) {
+                        const upsertRoom = { id: roomId, host: currUser.username };
+                        gRequest(NEW_ROOM, upsertRoom).then(({ insert_portal_room: { returning: [{ id }] } }) => {
+                            // upsert room  success
+                            gRequest(NEW_WINDOW, { room: id, title: winId }).then(({ insert_portal_window: { returning: [{ id }] } }) => {
+                                // 创建新window成功
+                                console.log("new window id", id);
+                                gRequest(INSERT_TABS, {
+                                    tabs: tabs.map(t => {
+                                        return { ...t, window: id };
+                                    })
+                                }).then((wtf) => {
+                                    console.log("插入tabs成功", wtf);
+                                });
+                            });
+                        });
+                    } else {
+                        gRequest(NEW_WINDOW, { room: roomId, title: winId }).then(({ insert_portal_window: { returning: [{ id }] } }) => {
+                            // 创建新window成功
+                            console.log("new window id", id);
+                            gRequest(INSERT_TABS, {
+                                tabs: tabs.map(t => {
+                                    return { ...t, window: id };
+                                })
+                            }).then((wtf) => {
+                                console.log("插入tabs成功", wtf);
+                            });
+                        });
+                    }
                 } else {
                     // 直接覆盖式更新
                     gRequest(DELETE_TABS, { wid: winId }).then(() => {
@@ -145,8 +174,9 @@ const initWebrowseSocket = async (io, socket, params = {}) => {
             }
                 break;
             case "END_ALL": {
-                //结束房间内的所有连接
+                //结束房间内的所有连接 并把房间销毁
                 io.in(socketRoom).disconnectSockets(true);
+                CurrentRoom.destory();
             }
                 break;
         }
@@ -159,10 +189,6 @@ const initWebrowseSocket = async (io, socket, params = {}) => {
         // ping timeout 先忽略？
         // if (reason == "ping timeout") return;
         CurrentRoom.removeActiveUser(socket.id);
-        // if(CurrentRoom.windowId){
-
-
-        // }
         socket.broadcast.in(socketRoom).emit(UPDATE_USERS, { users: CurrentRoom.activeUsers });
         io.in(socketRoom).emit(USER_LEAVE, currUser);
         socket.leave(socketRoom);

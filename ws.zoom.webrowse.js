@@ -1,6 +1,6 @@
 const { Rooms } = require("./Room");
 
-const initZoomVeraSocket = async (io, socket, params = {}) => {
+const initZoomWebrowseSocket = async (io, socket, params = {}) => {
     const { roomId } = params;
     if (!roomId) return;
     socket.join(`${roomId}_zoom`);
@@ -15,4 +15,4 @@ const initZoomVeraSocket = async (io, socket, params = {}) => {
         socket.leave(`${roomId}_zoom`);
     });
 };
-module.exports = { initZoomVeraSocket };
+module.exports = { initZoomWebrowseSocket };

@@ -26,6 +26,7 @@ class Room {
         this.name = "";
         this.temp = temp === "false" ? false : true;
         this.link = link;
+        this.creator = null;
         this.active = false;
         this.members = null;
         this.users = {};
@@ -45,10 +46,11 @@ class Room {
         });
         console.log("data fetched", result.portal_room);
         if (result && result.portal_room[0]) {
-            const [{ active, members, link, name, windows }] = result.portal_room;
+            const [{ creator, active, members, link, name, windows }] = result.portal_room;
             this.name = name;
             this.link = link;
             this.active = active;
+            this.creator = creator;
             this.members = members;
             this.windows = windows;
             // 激活当前房间
@@ -124,22 +126,24 @@ class Room {
             this.keepUsers = [...this.keepUsers, avtiveUser];
         }
     }
+    destory() {
+        if (this.temp && this.keepUsers.length) {
+            // 临时room，走一下存储逻辑
+            console.log("save to db");
+            this.saveToDatabase();
+        } else {
+            // 非临时room，设置为非活跃状态
+            this.setInactive();
+        }
+        // 释放掉
+        Rooms[this.id] = null;
+    }
     removeActiveUser(sid) {
         delete this.users[sid];
         // 房间没人了
         if (this.activeUsers.length == 0) {
-            console.log("nobody");
-            console.log("select keep users", this.keepUsers);
-            if (this.temp && this.keepUsers.length) {
-                // 临时room，走一下存储逻辑
-                console.log("save to db");
-                this.saveToDatabase();
-            } else {
-                // 非临时room，设置为非活跃状态
-                this.setInactive();
-            }
-            // 释放掉
-            Rooms[this.id] = null;
+            this.destory();
+
         }
     }
 

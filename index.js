@@ -8,10 +8,11 @@ const { arrayChunks } = require("./utils");
 const {
   gRequest,
   QUERY_ROOM_LIST,
+  WINDOW_LIST
 } = require("./graphqlClient");
 const { initVeraSocket } = require("./ws.vera");
 const { initWebrowseSocket } = require("./ws.webrowse");
-const { initZoomVeraSocket } = require("./ws.zoom.vera");
+const { initZoomWebrowseSocket } = require("./ws.zoom.webrowse");
 const { Rooms } = require("./Room");
 
 const managementClient = new ManagementClient({
@@ -28,7 +29,7 @@ const io = socketIo(server, {
     credentials: true,
   },
   upgradeTimeout: 40000,
-  pingTimeout: 50000
+  pingTimeout: 30000
 });
 
 const PORT = 4000;
@@ -42,23 +43,23 @@ io.on("connection", async (socket) => {
   switch (type) {
     case "VERA": {
       const {
-        roomId, winId, temp = false, link, peerId, ...userInfo
+        roomId, temp = false, link, peerId, ...userInfo
       } = rest;
-      initVeraSocket(io, socket, { roomId, winId, temp, link, peerId, userInfo });
+      initVeraSocket(io, socket, { roomId, temp, link, peerId, userInfo });
     }
       break;
     case "WEBROWSE": {
       const {
-        roomId, winId, temp = false, link, ...userInfo
+        roomId, winId, temp = false, ...userInfo
       } = rest;
-      initWebrowseSocket(io, socket, { roomId, winId, temp, link, userInfo });
+      initWebrowseSocket(io, socket, { roomId, winId, temp, userInfo });
     }
       break;
     case "ZOOM_VERA": {
       const {
         roomId
       } = rest;
-      initZoomVeraSocket(io, socket, { roomId });
+      initZoomWebrowseSocket(io, socket, { roomId });
     }
       break;
   }
@@ -100,6 +101,16 @@ app.get("/webrowse/user/active/:rid", async (req, res) => {
   }
   return res.json({
     users: room.activeUsers
+  });
+});
+// 
+app.get("/webrowse/window/list/:rid", async (req, res) => {
+  const { rid } = req.params;
+  if (!rid) return res.json(null);
+  const result = await gRequest(WINDOW_LIST, { room: rid });
+  const windows = result?.portal_window;
+  return res.json({
+    windows
   });
 });
 app.get("/members/authing/:username", async (req, res) => {
