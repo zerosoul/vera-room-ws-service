@@ -94,10 +94,16 @@ const initWebrowseSocket = async (io, socket, params = {}) => {
                 //新人加入，更新user list
                 socket.broadcast.in(socketRoom).emit(UPDATE_USERS, { users: CurrentWindow.activeUsers });
                 break;
-            case "BE_HOST":
+            case "BE_HOST": {
                 // 成为房主
-                CurrentWindow.beHost(socket.id, payload.enable);
+                const { enable, workspace } = payload;
+                CurrentWindow.beHost(socket.id, enable);
                 io.in(socketRoom).emit(UPDATE_USERS, { users: CurrentWindow.activeUsers });
+                if (enable && workspace) {
+                    // 立即同步房主的信息
+                    socket.broadcast.in(socketRoom).emit(TAB_EVENT, { data: workspace, fromHost: true });
+                }
+            }
                 break;
             case "FOLLOW_MODE":
                 // 是否开启follow mode
