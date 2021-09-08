@@ -36,6 +36,26 @@ const QUERY_ROOM = gql`
     }
   }
 `;
+const QUERY_WINDOW = gql`
+  query Window($id: uuid!) {
+    portal_window(where: { id: { _eq: $id } }) {
+      active
+      id
+      title
+      members
+      roomByRoom{
+        id
+        name
+      }
+      tabs {
+        title
+        id
+        url
+        icon
+      }
+    }
+  }
+`;
 const WINDOW_LIST = gql`
   query Windows($room: String!) {
     portal_window(where: {room: {_eq: $room}}) {
@@ -82,9 +102,30 @@ const UPDATE_ACTIVE = gql`
     }
   }
 `;
+const UPDATE_WINDOW_ACTIVE = gql`
+  mutation UpdateActive($active: Boolean!, $id: uuid!) {
+    update_portal_window(_set: { active: $active }, where: { id: { _eq: $id } }) {
+      returning {
+        active
+      }
+    }
+  }
+`;
 const UPDATE_MEMBERS = gql`
   mutation UpdateMembers($id: String!, $member: jsonb) {
     update_portal_room(
+      _prepend: { members: $member }
+      where: { id: { _eq: $id } }
+    ) {
+      returning {
+        members
+      }
+    }
+  }
+`;
+const UPDATE_WINDOW_MEMBERS = gql`
+  mutation UpdateMembers($id: uuid!, $member: jsonb) {
+    update_portal_window(
       _prepend: { members: $member }
       where: { id: { _eq: $id } }
     ) {
@@ -124,8 +165,11 @@ module.exports = {
   QUERY_ROOM_LIST,
   WINDOW_LIST,
   QUERY_ROOM,
+  QUERY_WINDOW,
   UPDATE_ACTIVE,
+  UPDATE_WINDOW_ACTIVE,
   UPDATE_MEMBERS,
+  UPDATE_WINDOW_MEMBERS,
   NEW_ROOM,
   NEW_WINDOW,
   DELETE_TABS,

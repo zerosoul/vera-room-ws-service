@@ -1,13 +1,12 @@
 const {
     gRequest,
-    // QUERY_ROOM_LIST,
-    QUERY_ROOM,
-    // UPDATE_ACTIVE,
-    UPDATE_MEMBERS,
-    NEW_ROOM
+    QUERY_WINDOW,
+    UPDATE_WINDOW_ACTIVE,
+    UPDATE_WINDOW_MEMBERS,
+    NEW_WINDOW
 } = require("./graphqlClient");
 const { sameUser } = require("./utils");
-const Rooms = {};
+const Windows = {};
 // 只保留需要的字段
 const filterMemberFields = (member = null) => {
     if (!member) return member;
@@ -20,16 +19,15 @@ const filterMemberFields = (member = null) => {
     });
     return tmp;
 };
-class Room {
-    constructor({ id, temp = "false", link = "" }) {
+class Window {
+    constructor({ id, temp = false }) {
         this.id = id;
-        this.name = "";
-        this.temp = temp === "false" ? false : true;
-        this.link = link;
-        this.creator = null;
+        this.title = "";
+        this.temp = temp;
         this.active = false;
-        this.members = null;
+        this.members = [];
         this.users = {};
+        this.room = {};
         this.tabs = null;
         this.workspaceData = null;
         this.keepUsers = [];
@@ -41,48 +39,45 @@ class Room {
     async fetchData() {
         console.log("start fetch", this.temp, typeof this.temp);
         if (this.temp) { return; }
-        const result = await gRequest(QUERY_ROOM, {
+        const result = await gRequest(QUERY_WINDOW, {
             id: this.id,
         });
-        console.log("data fetched", result.portal_room);
-        if (result && result.portal_room[0]) {
-            const [{ creator, active, members, link, name, windows }] = result.portal_room;
-            this.name = name;
-            this.link = link;
+        console.log("data fetched", result.portal_window);
+        if (result && result.portal_window[0]) {
+            const [{ title, members, active, roomByRoom }] = result.portal_window;
+            this.title = title;
             this.active = active;
-            this.creator = creator;
             this.members = members;
-            this.windows = windows;
-            // 激活当前房间
-            // if (!active) {
-            //     this.setActive();
-            // }
+            this.room = roomByRoom;
+            // 激活当前window
+            if (!active) {
+                this.setActive();
+            }
         }
     }
     saveToDatabase() {
         // 写回数据库
-        let roomName = this.keepUsers.map(u => u.username).join(",");
-        let creator = (this.keepUsers.find(u => u.creator == true) || { username: "" }).username;
-        let { id, link } = this;
-        const params = { creator, host: creator, name: roomName, id, link, members: this.keepUsers };
-        gRequest(NEW_ROOM, params).then((wtf) => {
+        let { id } = this;
+        const params = { title: "window", id, members: this.keepUsers };
+        gRequest(NEW_WINDOW, params).then((wtf) => {
             console.log(wtf);
         });
     }
-    // setActive() {
-    //     console.log("active the room");
-    //     // 设置为活跃房间
-    //     gRequest(UPDATE_ACTIVE, { active: true, id: this.id }).then((wtf) => {
-    //         console.log(wtf);
-    //     });
-    // }
-    // setInactive() {
-    //     // 设置为不活跃房间
-    //     gRequest(UPDATE_ACTIVE, { active: false, id: this.id }).then((wtf) => {
-    //         console.log(wtf);
-    //     });
-    // }
+    setActive() {
+        console.log("active the window");
+        // 设置为活跃window
+        gRequest(UPDATE_WINDOW_ACTIVE, { active: true, id: this.id }).then((wtf) => {
+            console.log(wtf);
+        });
+    }
+    setInactive() {
+        // 设置为不活跃window
+        gRequest(UPDATE_WINDOW_ACTIVE, { active: false, id: this.id }).then((wtf) => {
+            console.log(wtf);
+        });
+    }
     appendMember(member) {
+        if (this.temp) return;
         // 更新参与者
         if (!this.members) return;
         // 如果没有uid，就pass掉
@@ -92,7 +87,7 @@ class Room {
         if (filterd.length == 0) {
             // append member
             console.log("append member", member);
-            gRequest(UPDATE_MEMBERS, {
+            gRequest(UPDATE_WINDOW_MEMBERS, {
                 member: filterMemberFields(member),
                 id: this.id,
             });
@@ -119,7 +114,7 @@ class Room {
         }
     }
     addKeepUser(sid) {
-        //   该用户选择保留临时房间
+        //   该用户选择保留临时window
         const avtiveUser = this.activeUsers.find(u => u.id == sid);
         const filterd = this.keepUsers.filter((u) => sameUser(u, avtiveUser));
         if (filterd.length == 0) {
@@ -128,19 +123,19 @@ class Room {
     }
     destory() {
         if (this.temp && this.keepUsers.length) {
-            // 临时room，走一下存储逻辑
+            // 临时window，走一下存储逻辑
             console.log("save to db");
             this.saveToDatabase();
         } else {
-            // 非临时room，设置为非活跃状态
-            // this.setInactive();
+            // 非临时window，设置为非活跃状态
+            this.setInactive();
         }
         // 释放掉
-        Rooms[this.id] = null;
+        Windows[this.id] = null;
     }
     removeActiveUser(sid) {
         delete this.users[sid];
-        // 房间没人了
+        // window没人了
         if (this.activeUsers.length == 0) {
             this.destory();
 
@@ -148,12 +143,12 @@ class Room {
     }
 
 }
-const getRoomInstance = async ({ id, temp, link }) => {
-    if (!Rooms[id]) {
-        Rooms[id] = new Room({ id, temp, link });
+const getWindowInstance = async ({ id, temp }) => {
+    if (!Windows[id]) {
+        Windows[id] = new Window({ id, temp });
     }
-    await Rooms[id].fetchData();
-    return Rooms[id];
+    await Windows[id].fetchData();
+    return Windows[id];
 };
-module.exports = getRoomInstance;
-module.exports.Rooms = Rooms;
+module.exports = getWindowInstance;
+module.exports.Windows = Windows;
