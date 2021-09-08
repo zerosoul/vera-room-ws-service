@@ -3,7 +3,7 @@ const {
     QUERY_WINDOW,
     UPDATE_WINDOW_ACTIVE,
     UPDATE_WINDOW_MEMBERS,
-    NEW_WINDOW
+    // NEW_WINDOW
 } = require("./graphqlClient");
 const { sameUser } = require("./utils");
 const Windows = {};
@@ -30,7 +30,6 @@ class Window {
         this.room = {};
         this.tabs = null;
         this.workspaceData = null;
-        this.keepUsers = [];
     }
     get activeUsers() {
         console.log("current users", this.users);
@@ -54,14 +53,6 @@ class Window {
                 this.setActive();
             }
         }
-    }
-    saveToDatabase() {
-        // 写回数据库
-        let { id } = this;
-        const params = { title: "window", id, members: this.keepUsers };
-        gRequest(NEW_WINDOW, params).then((wtf) => {
-            console.log(wtf);
-        });
     }
     setActive() {
         console.log("active the window");
@@ -113,20 +104,8 @@ class Window {
             this.users[sid] = { ...this.users[sid], ...params };
         }
     }
-    addKeepUser(sid) {
-        //   该用户选择保留临时window
-        const avtiveUser = this.activeUsers.find(u => u.id == sid);
-        const filterd = this.keepUsers.filter((u) => sameUser(u, avtiveUser));
-        if (filterd.length == 0) {
-            this.keepUsers = [...this.keepUsers, avtiveUser];
-        }
-    }
     destory() {
-        if (this.temp && this.keepUsers.length) {
-            // 临时window，走一下存储逻辑
-            console.log("save to db");
-            this.saveToDatabase();
-        } else {
+        if (!this.temp) {
             // 非临时window，设置为非活跃状态
             this.setInactive();
         }

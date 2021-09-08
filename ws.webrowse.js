@@ -111,10 +111,6 @@ const initWebrowseSocket = async (io, socket, params = {}) => {
                 socket.emit(CURRENT_USERS, { workspaceData: CurrentWindow.workspaceData, users: CurrentWindow.activeUsers, update: true });
                 // io.in(socketRoom).emit(UPDATE_USERS, { users: CurrentWindow.activeUsers });
                 break;
-            case "KEEP_ROOM":
-                // 有用户选择保留房间
-                CurrentWindow.addKeepUser(socket.id);
-                break;
             case "RAW_TABS": {
                 //更新原始tab list信息
                 const { tabs } = payload;
