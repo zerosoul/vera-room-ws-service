@@ -62,7 +62,7 @@ const initWebrowseSocket = async (io, socket, params = {}) => {
                 if (!isHost) {
                     delete wsData.activeTabIndex;
                 }
-                socket.broadcast.in(socketRoom).emit(TAB_EVENT, { data: wsData });
+                socket.broadcast.in(socketRoom).emit(TAB_EVENT, { data: wsData, fromHost: isHost });
                 CurrentWindow.workspaceData = { ...CurrentWindow.workspaceData, ...wsData };
             }
                 break;
@@ -130,7 +130,7 @@ const initWebrowseSocket = async (io, socket, params = {}) => {
                         const upsertRoom = { id: roomId, host: currUser.username };
                         gRequest(NEW_ROOM, upsertRoom).then(({ insert_portal_room: { returning: [{ id }] } }) => {
                             // upsert room  success
-                            gRequest(NEW_WINDOW, { room: id, title: `window - created ${new Date().toLocaleDateString("en-US")}` }).then(({ insert_portal_window: { returning: [{ id }] } }) => {
+                            gRequest(NEW_WINDOW, { room: id, title: `created ${new Date().toLocaleDateString("en-US")}` }).then(({ insert_portal_window: { returning: [{ id }] } }) => {
                                 // 创建新window成功
                                 console.log("new window id", id);
                                 gRequest(INSERT_TABS, {
@@ -143,7 +143,7 @@ const initWebrowseSocket = async (io, socket, params = {}) => {
                             });
                         });
                     } else {
-                        gRequest(NEW_WINDOW, { room: roomId, title: `window - created ${new Date().toLocaleDateString("en-US")}` }).then(({ insert_portal_window: { returning: [{ id }] } }) => {
+                        gRequest(NEW_WINDOW, { room: roomId, title: `created ${new Date().toLocaleDateString("en-US")}` }).then(({ insert_portal_window: { returning: [{ id }] } }) => {
                             // 创建新window成功
                             console.log("new window id", id);
                             gRequest(INSERT_TABS, {
