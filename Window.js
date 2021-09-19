@@ -113,11 +113,16 @@ class Window {
         Windows[this.id] = null;
     }
     removeActiveUser(sid) {
+        const currUser = this.users[sid];
+        if (currUser.host) {
+            Object.keys(this.users).forEach(k => {
+                this.users[k].follow = false;
+            });
+        }
         delete this.users[sid];
         // window没人了
         if (this.activeUsers.length == 0) {
             this.destory();
-
         }
     }
 
