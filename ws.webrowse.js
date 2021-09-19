@@ -40,6 +40,12 @@ const initWebrowseSocket = async (io, socket, params = {}) => {
     if (temp || (currUser.uid && CurrentRoom.creator == currUser.username) || (currUser.uid == CurrentRoom.id)) {
         currUser.creator = true;
     }
+    // 第一个进入房间的人，默认host，否则设置follow
+    if (CurrentWindow.activeUsers.length == 0) {
+        currUser.host = true;
+    } else if (CurrentWindow.activeUsers.filter(u => u.host).length) {
+        currUser.follow = true;
+    }
     CurrentWindow.addActiveUser(socket.id, currUser);
     const { title, members } = CurrentWindow;
     socket.emit(CURRENT_USERS, { title, room: { id: CurrentRoom.id, name: CurrentRoom.name, temp, members }, workspaceData: CurrentWindow.workspaceData, users: CurrentWindow.activeUsers });
