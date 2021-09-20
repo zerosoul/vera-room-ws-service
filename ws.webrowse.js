@@ -11,6 +11,7 @@ const {
 const CURRENT_USERS = "CURRENT_USERS";
 const JOIN_MEETING = "JOIN_MEETING";
 const TAB_EVENT = "TAB_EVENT";
+const WORKSPACE = "WORKSPACE";
 const UPDATE_USERS = "UPDATE_USERS";
 const USER_LEAVE = "USER_LEAVE";
 const USER_ENTER = "USER_ENTER";
@@ -56,9 +57,15 @@ const initWebrowseSocket = async (io, socket, params = {}) => {
         const { cmd = USER_ENTER, payload = {} } = data;
         console.log({ payload });
         switch (cmd) {
-            case TAB_EVENT: { // tab CRUD
-                console.log("tab event");
-                const wsData = payload.data;
+            case TAB_EVENT: {
+                const { type, tab } = payload;
+                console.log("tab event", type, tab);
+                socket.broadcast.in(socketRoom).emit(TAB_EVENT, { username: currUser.username, type, tab });
+            }
+                break;
+            case WORKSPACE: { // workspace event
+                const { workspace: wsData } = payload;
+                console.log("workspace event", wsData);
                 // 更新内存中对应用户的活动tab
                 CurrentWindow.updateUser(socket.id, { activeIndex: wsData.activeTabIndex });
                 io.in(socketRoom).emit(UPDATE_USERS, { users: CurrentWindow.activeUsers });
@@ -68,7 +75,7 @@ const initWebrowseSocket = async (io, socket, params = {}) => {
                 if (!isHost) {
                     delete wsData.activeTabIndex;
                 }
-                socket.broadcast.in(socketRoom).emit(TAB_EVENT, { data: wsData, fromHost: isHost });
+                socket.broadcast.in(socketRoom).emit(WORKSPACE, { data: wsData, fromHost: isHost });
                 CurrentWindow.workspaceData = { ...CurrentWindow.workspaceData, ...wsData };
             }
                 break;
@@ -107,7 +114,7 @@ const initWebrowseSocket = async (io, socket, params = {}) => {
                 io.in(socketRoom).emit(UPDATE_USERS, { users: CurrentWindow.activeUsers });
                 if (enable && workspace) {
                     // 立即同步房主的信息
-                    socket.broadcast.in(socketRoom).emit(TAB_EVENT, { data: workspace, fromHost: true });
+                    socket.broadcast.in(socketRoom).emit(WORKSPACE, { data: workspace, fromHost: true });
                 }
             }
                 break;
