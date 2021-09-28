@@ -111,6 +111,7 @@ class Window {
         }
         // 释放掉
         Windows[this.id] = null;
+        delete Windows[this.id];
     }
     removeActiveUser(sid) {
         const currUser = this.users[sid];
@@ -128,7 +129,9 @@ class Window {
 
 }
 const getWindowInstance = async ({ id, temp }) => {
+    console.log("current window list", { Windows });
     if (!Windows[id]) {
+        console.log("new window obj");
         Windows[id] = new Window({ id, temp });
     }
     await Windows[id].fetchData();

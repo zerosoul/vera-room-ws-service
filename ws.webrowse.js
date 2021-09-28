@@ -189,7 +189,7 @@ const initWebrowseSocket = async (io, socket, params = {}) => {
                 break;
             case "END_ALL": {
                 //结束房间内的所有连接 并把房间销毁
-                io.in(socketRoom).disconnectSockets(true);
+                io.in(socketRoom).disconnectSockets();
                 CurrentWindow.destory();
             }
                 break;
