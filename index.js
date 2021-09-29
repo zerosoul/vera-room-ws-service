@@ -56,7 +56,7 @@ io.on("connection", async (socket) => {
       initWebrowseSocket(io, socket, { roomId, winId, temp, userInfo });
     }
       break;
-    case "ZOOM_VERA": {
+    case "ZOOM_WEBROWSE": {
       const {
         roomId
       } = rest;
