@@ -19,11 +19,9 @@ const initVeraSocket = async (io, socket, params = {}) => {
         uid: userInfo.uid,
         photo: userInfo.photo,
         username: userInfo.username,
-        activeIndex: 0,
         // peerId 非空，则代表webrtc连接建立
         peerId,
     };
-    CurrentRoom.appendMember(member);
     // 当前用户
     const currUser = { ...member };
     // 第一个进来，初始化房间人数为1
@@ -31,11 +29,12 @@ const initVeraSocket = async (io, socket, params = {}) => {
         // 临时room的创建者
         if (temp) {
             currUser.creator = true;
+            currUser.meeting = true;
         }
     }
     CurrentRoom.addActiveUser(socket.id, currUser);
-    const { id, name, temp: isTemp, link: defaultLink, members } = CurrentRoom;
-    socket.emit(CURRENT_USERS, { room: { id, name, temp: isTemp, link: defaultLink, members }, workspaceData: CurrentRoom.workspaceData, users: CurrentRoom.activeUsers });
+    const { id, temp: isTemp } = CurrentRoom;
+    socket.emit(CURRENT_USERS, { room: { id, temp: isTemp }, users: CurrentRoom.activeUsers });
 
     // new user
     socket.on("message", (data) => {
@@ -48,11 +47,11 @@ const initVeraSocket = async (io, socket, params = {}) => {
                 CurrentRoom.updateUser(socket.id, { meeting: true });
                 // 只通知meeting中的用户
                 let notifyUsers = CurrentRoom.activeUsers.filter(u => u.meeting && u.id !== socket.id);
+                console.log("meeting users", notifyUsers);
                 notifyUsers.forEach(user => {
                     socket.broadcast.to(user.id).emit(JOIN_MEETING, CurrentRoom.users[socket.id]);
                 });
                 //加入meeting，更新user list
-                // socket.broadcast.in(socketRoom).emit(JOIN_MEETING, CurrentRoom.users[socket.id]);
                 io.in(socketRoom).emit(UPDATE_USERS, { users: CurrentRoom.activeUsers });
             }
                 break;
@@ -67,7 +66,7 @@ const initVeraSocket = async (io, socket, params = {}) => {
                 // 向房间内其它人广播新加入的用户
                 socket.broadcast.in(socketRoom).emit(USER_ENTER, CurrentRoom.addActiveUser(socket.id, currUser));
                 // 更新自己的
-                socket.emit(CURRENT_USERS, { workspaceData: CurrentRoom.workspaceData, users: CurrentRoom.activeUsers, update: true });
+                socket.emit(CURRENT_USERS, { users: CurrentRoom.activeUsers, update: true });
                 //新人加入，更新user list
                 socket.broadcast.in(socketRoom).emit(UPDATE_USERS, { users: CurrentRoom.activeUsers });
                 break;
@@ -75,8 +74,7 @@ const initVeraSocket = async (io, socket, params = {}) => {
                 // 更新peerid
                 CurrentRoom.updateUser(socket.id, { peerId: payload.peerId });
                 // 更新自己的
-                socket.emit(CURRENT_USERS, { workspaceData: CurrentRoom.workspaceData, users: CurrentRoom.activeUsers, update: true });
-                // io.in(socketRoom).emit(UPDATE_USERS, { users: CurrentRoom.activeUsers });
+                socket.emit(CURRENT_USERS, { users: CurrentRoom.activeUsers, update: true });
                 break;
             case "SYNC_URL":
                 //同步url的更新
@@ -90,11 +88,6 @@ const initVeraSocket = async (io, socket, params = {}) => {
         // ping timeout 先忽略？
         // if (reason == "ping timeout") return;
         CurrentRoom.removeActiveUser(socket.id);
-        // if(CurrentRoom.windowId){
-
-
-        // }
-        socket.broadcast.in(socketRoom).emit(UPDATE_USERS, { users: CurrentRoom.activeUsers });
         io.in(socketRoom).emit(USER_LEAVE, currUser);
         socket.leave(socketRoom);
     });
