@@ -14,6 +14,7 @@ const { initVeraSocket } = require("./ws.vera");
 const { initWebrowseSocket } = require("./ws.webrowse");
 const { initZoomWebrowseSocket } = require("./ws.zoom.webrowse");
 const { Rooms } = require("./Room");
+const { Windows } = require("./Window");
 
 const managementClient = new ManagementClient({
   userPoolId: "6034a31382f5d09e3b5a15fa",
@@ -78,12 +79,12 @@ app.get("/zoom/user/:uid", async (req, res) => {
   if (!uid) return res.json(null);
   let room_id = null;
   console.log("get zoom id with uid");
-  Object.entries(Rooms).forEach(([rid, room]) => {
-    if (!room) return;
-    console.log("get zoom id with uid:", rid, room.activeUsers);
-    let us = room.activeUsers;
+  Object.entries(Windows).forEach(([wid, win]) => {
+    if (!win) return;
+    console.log("get zoom id with uid:", wid, win.activeUsers);
+    let us = win.activeUsers;
     if (us.findIndex((u) => u.uid == uid) > -1) {
-      room_id = rid;
+      room_id = wid;
     }
   });
   return res.json({
