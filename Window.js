@@ -43,11 +43,12 @@ class Window {
         });
         console.log("data fetched", result.portal_window);
         if (result && result.portal_window[0]) {
-            const [{ title, members, active, roomByRoom }] = result.portal_window;
+            const [{ title, members, active, roomByRoom, tabs }] = result.portal_window;
             this.title = title;
             this.active = active;
             this.members = members;
             this.room = roomByRoom;
+            this.tabs = tabs.map(t => { return { url: t.url }; });
             // 激活当前window
             if (!active) {
                 this.setActive();

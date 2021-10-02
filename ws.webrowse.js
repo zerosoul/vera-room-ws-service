@@ -17,14 +17,14 @@ const USER_LEAVE = "USER_LEAVE";
 const USER_ENTER = "USER_ENTER";
 
 const initWebrowseSocket = async (io, socket, params = {}) => {
-    const { roomId, winId = "", temp = false, userInfo } = params;
+    const { roomId, winId = "", temp = false, invited = false, userInfo } = params;
     if (!winId) return;
     const socketRoom = `${winId}`;
     socket.join(socketRoom);
     // room factory
     const CurrentRoom = await getRoomInstance({ id: roomId, temp });
     const CurrentWindow = await getWindowInstance({ id: winId, temp: winId.endsWith("_temp") });
-    console.log({ CurrentRoom, CurrentWindow, roomId, winId, userInfo });
+    console.log({ CurrentRoom, CurrentWindow, roomId, winId, userInfo, invited });
     // 当前暂存内存中的user，id指的是当前ws连接的id，uid指的是authing的uid，和authing保持一致
     const member = {
         id: socket.id,
@@ -44,6 +44,10 @@ const initWebrowseSocket = async (io, socket, params = {}) => {
     // 第一个进入房间的人，默认host，否则设置follow
     if (CurrentWindow.activeUsers.length == 0) {
         currUser.host = true;
+        if (invited) {
+            CurrentWindow.workspaceData = { tabs: CurrentWindow.tabs };
+            console.log("invited", CurrentWindow.workspaceData);
+        }
     } else if (CurrentWindow.activeUsers.filter(u => u.host).length) {
         currUser.follow = true;
     }
