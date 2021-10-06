@@ -44,7 +44,7 @@ const initWebrowseSocket = async (io, socket, params = {}) => {
     // 第一个进入房间的人，默认host，否则设置follow
     if (CurrentWindow.activeUsers.length == 0) {
         currUser.host = true;
-        if (invited) {
+        if (invited && CurrentWindow.tabs) {
             CurrentWindow.workspaceData = { tabs: CurrentWindow.tabs };
             console.log("invited", CurrentWindow.workspaceData);
         }
