@@ -201,10 +201,14 @@ const initWebrowseSocket = async (io, socket, params = {}) => {
             case "UPDATE_WIN_TITLE": {
                 //更新window title
                 const { title } = payload;
-                gRequest(UPDATE_WIN_TITLE, { id: CurrentWindow.id, title }).then((wtf) => {
-                    console.log("update window title", wtf);
+                if (CurrentWindow.temp) {
                     io.in(socketRoom).emit("UPDATE_WIN_TITLE", { title });
-                });
+                } else {
+                    gRequest(UPDATE_WIN_TITLE, { id: CurrentWindow.id, title }).then((wtf) => {
+                        console.log("update window title", wtf);
+                        io.in(socketRoom).emit("UPDATE_WIN_TITLE", { title });
+                    });
+                }
             }
                 break;
         }
