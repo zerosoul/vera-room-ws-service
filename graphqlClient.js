@@ -93,6 +93,17 @@ mutation NewRoom($room: String!, $title: String!){
   }
 }
 `;
+const UPDATE_WIN_TITLE = gql`
+mutation UpdateWinTitle($id: uuid!, $title: String!) {
+  update_portal_window(where: {id: {_eq: $id}}, _set: {title: $title}) {
+    affected_rows
+    returning {
+      id
+      title
+    }
+  }
+}
+`;
 const UPDATE_ACTIVE = gql`
   mutation UpdateActive($active: Boolean!, $id: String!) {
     update_portal_room(_set: { active: $active }, where: { id: { _eq: $id } }) {
@@ -173,5 +184,6 @@ module.exports = {
   NEW_ROOM,
   NEW_WINDOW,
   DELETE_TABS,
-  INSERT_TABS
+  INSERT_TABS,
+  UPDATE_WIN_TITLE
 };

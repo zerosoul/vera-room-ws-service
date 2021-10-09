@@ -6,7 +6,8 @@ const {
     INSERT_TABS,
     NEW_ROOM,
     NEW_WINDOW,
-    DELETE_TABS
+    DELETE_TABS,
+    UPDATE_WIN_TITLE
 } = require("./graphqlClient");
 const CURRENT_USERS = "CURRENT_USERS";
 const JOIN_MEETING = "JOIN_MEETING";
@@ -195,6 +196,15 @@ const initWebrowseSocket = async (io, socket, params = {}) => {
                 //结束房间内的所有连接 并把房间销毁
                 io.in(socketRoom).disconnectSockets();
                 CurrentWindow.destory();
+            }
+                break;
+            case "UPDATE_WIN_TITLE": {
+                //更新window title
+                const { title } = payload;
+                gRequest(UPDATE_WIN_TITLE, { id: CurrentWindow.id, title }).then((wtf) => {
+                    console.log("update window title", wtf);
+                    io.in(socketRoom).emit("UPDATE_WIN_TITLE", { title });
+                });
             }
                 break;
         }
