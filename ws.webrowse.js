@@ -18,13 +18,13 @@ const USER_LEAVE = "USER_LEAVE";
 const USER_ENTER = "USER_ENTER";
 
 const initWebrowseSocket = async (io, socket, params = {}) => {
-    const { roomId, winId = "", temp = false, invited = false, userInfo } = params;
+    const { roomId, winId = "", title: initialTitle, temp = false, invited = false, userInfo } = params;
     if (!winId) return;
     const socketRoom = `${winId}`;
     socket.join(socketRoom);
     // room factory
     const CurrentRoom = await getRoomInstance({ id: roomId, temp });
-    const CurrentWindow = await getWindowInstance({ id: winId, temp: winId.endsWith("_temp") });
+    const CurrentWindow = await getWindowInstance({ id: winId, temp: winId.endsWith("_temp"), title: initialTitle });
     console.log({ CurrentRoom, CurrentWindow, roomId, winId, userInfo, invited });
     // 当前暂存内存中的user，id指的是当前ws连接的id，uid指的是authing的uid，和authing保持一致
     const member = {
@@ -146,11 +146,12 @@ const initWebrowseSocket = async (io, socket, params = {}) => {
                 const { tabs } = payload;
                 if (winId.endsWith("_temp")) {
                     // 临时window
+                    let title = CurrentWindow.title ?? `created ${new Date().toLocaleDateString("en-US")}`;
                     if (roomId == currUser.uid) {
                         const upsertRoom = { id: roomId, host: currUser.username };
                         gRequest(NEW_ROOM, upsertRoom).then(({ insert_portal_room: { returning: [{ id }] } }) => {
                             // upsert room  success
-                            gRequest(NEW_WINDOW, { room: id, title: `created ${new Date().toLocaleDateString("en-US")}` }).then(({ insert_portal_window: { returning: [{ id }] } }) => {
+                            gRequest(NEW_WINDOW, { room: id, title }).then(({ insert_portal_window: { returning: [{ id }] } }) => {
                                 // 创建新window成功
                                 console.log("new window id", id);
                                 gRequest(INSERT_TABS, {
@@ -163,7 +164,7 @@ const initWebrowseSocket = async (io, socket, params = {}) => {
                             });
                         });
                     } else {
-                        gRequest(NEW_WINDOW, { room: roomId, title: `created ${new Date().toLocaleDateString("en-US")}` }).then(({ insert_portal_window: { returning: [{ id }] } }) => {
+                        gRequest(NEW_WINDOW, { room: roomId, title }).then(({ insert_portal_window: { returning: [{ id }] } }) => {
                             // 创建新window成功
                             console.log("new window id", id);
                             gRequest(INSERT_TABS, {
@@ -201,6 +202,7 @@ const initWebrowseSocket = async (io, socket, params = {}) => {
             case "UPDATE_WIN_TITLE": {
                 //更新window title
                 const { title } = payload;
+                CurrentWindow.title = title;
                 if (CurrentWindow.temp) {
                     io.in(socketRoom).emit("UPDATE_WIN_TITLE", { title });
                 } else {
