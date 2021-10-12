@@ -1,5 +1,6 @@
 require("dotenv").config();
 const http = require("http");
+const bodyParser = require("body-parser");
 const express = require("express");
 const cors = require("cors");
 const socketIo = require("socket.io");
@@ -8,7 +9,8 @@ const { arrayChunks } = require("./utils");
 const {
   gRequest,
   QUERY_ROOM_LIST,
-  WINDOW_LIST
+  WINDOW_LIST,
+  UPDATE_WIN_TITLE
 } = require("./graphqlClient");
 const { initVeraSocket } = require("./ws.vera");
 const { initWebrowseSocket } = require("./ws.webrowse");
@@ -22,6 +24,7 @@ const managementClient = new ManagementClient({
 });
 const app = express();
 app.use(cors());
+app.use(bodyParser.json());
 const server = http.createServer(app);
 const io = socketIo(server, {
   cors: {
@@ -112,6 +115,15 @@ app.get("/webrowse/window/list/:rid", async (req, res) => {
   const windows = result?.portal_window;
   return res.json({
     windows
+  });
+});
+app.post("/webrowse/window/title", async (req, res) => {
+  console.log(req.body);
+  const { id, title } = req.body;
+  if (!id) return res.json(null);
+  const result = await gRequest(UPDATE_WIN_TITLE, { id, title });
+  return res.json({
+    result
   });
 });
 app.get("/members/authing/:username", async (req, res) => {
