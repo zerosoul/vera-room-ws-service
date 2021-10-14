@@ -76,6 +76,10 @@ const initVeraSocket = async (io, socket, params = {}) => {
                 // 更新自己的
                 socket.emit(CURRENT_USERS, { users: CurrentRoom.activeUsers, update: true });
                 break;
+            case "SYNC_PLAYER":
+                //同步播放器的状态
+                socket.broadcast.in(socketRoom).emit("SYNC_PLAYER", { ...payload });
+                break;
             case "SYNC_URL":
                 //同步url的更新
                 socket.broadcast.in(socketRoom).emit("SYNC_URL", { url: payload.url });
