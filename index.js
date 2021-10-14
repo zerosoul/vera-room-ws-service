@@ -10,7 +10,8 @@ const {
   gRequest,
   QUERY_ROOM_LIST,
   WINDOW_LIST,
-  UPDATE_WIN_TITLE
+  UPDATE_WIN_TITLE,
+  QUERY_WINDOW
 } = require("./graphqlClient");
 const { initVeraSocket } = require("./ws.vera");
 const { initWebrowseSocket } = require("./ws.webrowse");
@@ -125,6 +126,22 @@ app.post("/webrowse/window/title", async (req, res) => {
   return res.json({
     result
   });
+});
+app.get("/webrowse/window/:wid", async (req, res) => {
+  const { wid } = req.params;
+  if (!wid) return res.json(null);
+  try {
+
+    const result = await gRequest(QUERY_WINDOW, { id: wid });
+    const window = result?.portal_window;
+    return res.json({
+      window
+    });
+  } catch (error) {
+    return res.json({
+      window: null
+    });
+  }
 });
 app.get("/members/authing/:username", async (req, res) => {
   console.log("rrrr");
