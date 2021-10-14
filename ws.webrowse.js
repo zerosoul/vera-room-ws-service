@@ -49,8 +49,12 @@ const initWebrowseSocket = async (io, socket, params = {}) => {
             CurrentWindow.workspaceData = { tabs: CurrentWindow.tabs };
             console.log("invited", CurrentWindow.workspaceData);
         }
-    } else if (CurrentWindow.activeUsers.filter(u => u.host).length) {
-        currUser.follow = true;
+    } else {
+        let currHost = CurrentWindow.activeUsers.find(u => u.host);
+        if (currHost) {
+            currUser.follow = true;
+            currUser.activeIndex = currHost.activeIndex;
+        }
     }
     CurrentWindow.addActiveUser(socket.id, currUser);
     const { title, members } = CurrentWindow;
