@@ -11,7 +11,8 @@ const {
   QUERY_ROOM_LIST,
   WINDOW_LIST,
   UPDATE_WIN_TITLE,
-  QUERY_WINDOW
+  QUERY_WINDOW,
+  NEW_WINDOW, INSERT_TABS
 } = require("./graphqlClient");
 const { initVeraSocket } = require("./ws.vera");
 const { initWebrowseSocket } = require("./ws.webrowse");
@@ -140,6 +141,31 @@ app.get("/webrowse/window/:wid", async (req, res) => {
   } catch (error) {
     return res.json({
       window: null
+    });
+  }
+});
+app.post("/webrowse/window", async (req, res) => {
+  const { title, tabs } = req.body;
+  if (!title) return res.json(null);
+  try {
+    const result = await gRequest(NEW_WINDOW, { room: "workspace", title });
+    // 创建新window成功
+    console.log("new window", result);
+    if (result.insert_portal_window?.returning[0]?.id) {
+      const id = result.insert_portal_window?.returning[0]?.id;
+      gRequest(INSERT_TABS, {
+        tabs: tabs.map(t => {
+          return { ...t, window: id };
+        })
+      });
+      return res.json({
+        id: result.insert_portal_window?.returning[0]?.id
+      });
+    }
+  } catch (error) {
+    console.log({ error });
+    return res.json({
+      id: null
     });
   }
 });
