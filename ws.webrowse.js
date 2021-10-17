@@ -10,7 +10,7 @@ const {
     UPDATE_WIN_TITLE
 } = require("./graphqlClient");
 const CURRENT_USERS = "CURRENT_USERS";
-const JOIN_MEETING = "JOIN_MEETING";
+// const JOIN_MEETING = "JOIN_MEETING";
 const TAB_EVENT = "TAB_EVENT";
 const WORKSPACE = "WORKSPACE";
 const UPDATE_USERS = "UPDATE_USERS";
@@ -59,7 +59,8 @@ const initWebrowseSocket = async (io, socket, params = {}) => {
     CurrentWindow.addActiveUser(socket.id, currUser);
     const { title, members } = CurrentWindow;
     socket.emit(CURRENT_USERS, { title, room: { id: CurrentRoom.id, name: CurrentRoom.name, temp, members }, workspaceData: CurrentWindow.workspaceData, users: CurrentWindow.activeUsers });
-
+    // 广播给其它人：更新活跃用户
+    socket.broadcast.in(socketRoom).emit(UPDATE_USERS, { users: CurrentWindow.activeUsers });
     // new user
     socket.on("message", (data) => {
         console.log(data);
@@ -88,25 +89,6 @@ const initWebrowseSocket = async (io, socket, params = {}) => {
                 CurrentWindow.workspaceData = { ...CurrentWindow.workspaceData, ...wsData };
             }
                 break;
-            case JOIN_MEETING: {
-                // 建立webrtc连接，加入meeting
-                CurrentWindow.updateUser(socket.id, { meeting: true });
-                // 只通知meeting中的用户
-                let notifyUsers = CurrentWindow.activeUsers.filter(u => u.meeting && u.id !== socket.id);
-                notifyUsers.forEach(user => {
-                    socket.broadcast.to(user.id).emit(JOIN_MEETING, CurrentWindow.users[socket.id]);
-                });
-                //加入meeting，更新user list
-                // socket.broadcast.in(socketRoom).emit(JOIN_MEETING, CurrentWindow.users[socket.id]);
-                io.in(socketRoom).emit(UPDATE_USERS, { users: CurrentWindow.activeUsers });
-            }
-                break;
-            case "LEAVE_MEETING":
-                // 离开meeting
-                CurrentWindow.updateUser(socket.id, { meeting: false });
-                //离开meeting，更新user list
-                io.in(socketRoom).emit(UPDATE_USERS, { users: CurrentWindow.activeUsers });
-                break;
             case USER_ENTER:
                 // add user
                 // 向房间内其它人广播新加入的用户
@@ -131,13 +113,6 @@ const initWebrowseSocket = async (io, socket, params = {}) => {
                 // 是否开启follow mode
                 CurrentWindow.updateUser(socket.id, { follow: payload.follow });
                 io.in(socketRoom).emit(UPDATE_USERS, { users: CurrentWindow.activeUsers });
-                break;
-            case "PEER_ID":
-                // 更新peerid
-                CurrentWindow.updateUser(socket.id, { peerId: payload.peerId });
-                // 更新自己的
-                socket.emit(CURRENT_USERS, { workspaceData: CurrentWindow.workspaceData, users: CurrentWindow.activeUsers, update: true });
-                // io.in(socketRoom).emit(UPDATE_USERS, { users: CurrentWindow.activeUsers });
                 break;
             case "RAW_TABS": {
                 //更新原始tab list信息
