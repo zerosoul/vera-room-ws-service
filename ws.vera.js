@@ -21,6 +21,8 @@ const initVeraSocket = async (io, socket, params = {}) => {
         username: userInfo.username,
         // peerId 非空，则代表webrtc连接建立
         peerId,
+        // 默认开启同步videoplayer状态
+        syncPlayer: true
     };
     // 当前用户
     const currUser = { ...member };
@@ -76,9 +78,19 @@ const initVeraSocket = async (io, socket, params = {}) => {
                 // 更新自己的
                 socket.emit(CURRENT_USERS, { users: CurrentRoom.activeUsers, update: true });
                 break;
-            case "SYNC_PLAYER":
-                //同步播放器的状态
-                socket.broadcast.in(socketRoom).emit("SYNC_PLAYER", { ...payload });
+            case "SYNC_PLAYER": {
+                const { type, value } = payload;
+                if (type == "enable") {
+                    CurrentRoom.updateUser(socket.id, { syncPlayer: value });
+                } else {
+                    // 只通知开启player同步的member
+                    let notifyUsers = CurrentRoom.activeUsers.filter(u => u.syncPlayer && u.id !== socket.id);
+                    console.log("open syncPlayer users", notifyUsers);
+                    notifyUsers.forEach(user => {
+                        socket.broadcast.to(user.id).emit("SYNC_PLAYER", { ...payload });
+                    });
+                }
+            }
                 break;
             case "SYNC_URL":
                 //同步url的更新
