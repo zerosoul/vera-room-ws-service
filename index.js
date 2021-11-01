@@ -35,7 +35,8 @@ const io = socketIo(server, {
     credentials: true,
   },
   upgradeTimeout: 40000,
-  pingTimeout: 30000
+  pingTimeout: 25000,
+  pingInterval: 5000
 });
 
 const PORT = 4000;
