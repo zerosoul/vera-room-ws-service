@@ -37,7 +37,11 @@ const initVeraSocket = async (io, socket, params = {}) => {
     CurrentRoom.addActiveUser(socket.id, currUser);
     const { id, temp: isTemp } = CurrentRoom;
     socket.emit(CURRENT_USERS, { room: { id, temp: isTemp }, users: CurrentRoom.activeUsers });
-
+    // 如果有跳转，则跳转一下
+    if (CurrentRoom.link) {
+        console.log("sync url first", CurrentRoom.link);
+        socket.emit("SYNC_URL", { url: CurrentRoom.link });
+    }
     // new user
     socket.on("message", (data) => {
         console.log(data);
@@ -55,6 +59,7 @@ const initVeraSocket = async (io, socket, params = {}) => {
                 });
                 //加入meeting，更新user list
                 io.in(socketRoom).emit(UPDATE_USERS, { users: CurrentRoom.activeUsers });
+
             }
                 break;
             case "LEAVE_MEETING":
@@ -94,6 +99,7 @@ const initVeraSocket = async (io, socket, params = {}) => {
                 break;
             case "SYNC_URL":
                 //同步url的更新
+                CurrentRoom.link = payload.url;
                 socket.broadcast.in(socketRoom).emit("SYNC_URL", { url: payload.url });
                 break;
         }
