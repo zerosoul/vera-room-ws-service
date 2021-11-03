@@ -84,7 +84,7 @@ mutation NewRoom($creator: String, $host: String!, $id: String!, $link: String, 
 }
 `;
 const NEW_WINDOW = gql`
-mutation NewRoom($room: String!, $title: String!){
+mutation NewWindow($room: String!, $title: String!){
   insert_portal_window(objects: {room: $room, title: $title}) {
     returning {
       id
@@ -118,6 +118,15 @@ const UPDATE_WINDOW_ACTIVE = gql`
     update_portal_window(_set: { active: $active }, where: { id: { _eq: $id } }) {
       returning {
         active
+      }
+    }
+  }
+`;
+const REMOVE_WINDOW = gql`
+  mutation RemoveWindow($id: uuid!) {
+    delete_portal_window(where: {id: {_eq: $id}}) {
+      returning {
+        id
       }
     }
   }
@@ -183,6 +192,7 @@ module.exports = {
   UPDATE_WINDOW_MEMBERS,
   NEW_ROOM,
   NEW_WINDOW,
+  REMOVE_WINDOW,
   DELETE_TABS,
   INSERT_TABS,
   UPDATE_WIN_TITLE

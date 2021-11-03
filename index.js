@@ -8,6 +8,7 @@ const { ManagementClient } = require("authing-js-sdk");
 const { arrayChunks } = require("./utils");
 const {
   gRequest,
+  REMOVE_WINDOW,
   QUERY_ROOM_LIST,
   WINDOW_LIST,
   UPDATE_WIN_TITLE,
@@ -142,6 +143,24 @@ app.get("/webrowse/window/:wid", async (req, res) => {
   } catch (error) {
     return res.json({
       window: null
+    });
+  }
+});
+app.delete("/webrowse/window/:wid", async (req, res) => {
+  console.log("start delete window", req.params);
+  const { wid } = req.params;
+  if (!wid) return res.json(null);
+  try {
+    const result = await gRequest(REMOVE_WINDOW, { id: wid });
+    console.log("remove return", result);
+    const id = result?.delete_portal_window?.returning[0]?.id;
+    return res.json({
+      id
+    });
+  } catch (error) {
+    console.log("remove window error", error);
+    return res.json({
+      id: null
     });
   }
 });
