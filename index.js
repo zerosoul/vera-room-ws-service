@@ -8,6 +8,7 @@ const { ManagementClient } = require("authing-js-sdk");
 const { arrayChunks } = require("./utils");
 const {
   gRequest,
+  DELETE_TABS,
   REMOVE_WINDOW,
   QUERY_ROOM_LIST,
   WINDOW_LIST,
@@ -181,6 +182,52 @@ app.post("/webrowse/window", async (req, res) => {
       return res.json({
         id: result.insert_portal_window?.returning[0]?.id
       });
+    }
+  } catch (error) {
+    console.log({ error });
+    return res.json({
+      id: null
+    });
+  }
+});
+app.post("/webrowse/window/upsert", async (req, res) => {
+  const { id = "", room, title, tabs } = req.body;
+  if (!title) return res.json(null);
+  try {
+    if (id) {
+      // update
+      // update window title
+      gRequest(UPDATE_WIN_TITLE, { id, title });
+      //  update tabs
+      // 直接覆盖式更新
+      await gRequest(DELETE_TABS, { wid: id });
+      // 删除成功
+      console.log("insert new tabs", tabs);
+      const resp = await gRequest(INSERT_TABS, {
+        tabs: tabs.map(t => {
+          return { ...t, window: id };
+        })
+      });
+      console.log("update window tabs", resp);
+      return res.json({
+        id
+      });
+    } else {
+      // create
+      const result = await gRequest(NEW_WINDOW, { room, title });
+      // 创建新window成功
+      console.log("new window", result);
+      if (result.insert_portal_window?.returning[0]?.id) {
+        const id = result.insert_portal_window?.returning[0]?.id;
+        gRequest(INSERT_TABS, {
+          tabs: tabs.map(t => {
+            return { ...t, window: id };
+          })
+        });
+        return res.json({
+          id: result.insert_portal_window?.returning[0]?.id
+        });
+      }
     }
   } catch (error) {
     console.log({ error });
