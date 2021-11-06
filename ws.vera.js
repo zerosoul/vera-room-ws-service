@@ -38,10 +38,10 @@ const initVeraSocket = async (io, socket, params = {}) => {
     const { id, temp: isTemp } = CurrentRoom;
     socket.emit(CURRENT_USERS, { room: { id, temp: isTemp }, users: CurrentRoom.activeUsers });
     // 如果有跳转，则跳转一下
-    if (CurrentRoom.link) {
-        console.log("sync url first", CurrentRoom.link);
-        socket.emit("SYNC_URL", { url: CurrentRoom.link });
-    }
+    // if (CurrentRoom.link) {
+    //     console.log("sync url first", CurrentRoom.link);
+    //     socket.emit("SYNC_URL", { url: CurrentRoom.link });
+    // }
     // new user
     socket.on("message", (data) => {
         console.log(data);
