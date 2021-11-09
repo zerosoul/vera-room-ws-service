@@ -24,7 +24,7 @@ const initWebrowseSocket = async (io, socket, params = {}) => {
     socket.join(socketRoom);
     // room factory
     const CurrentRoom = await getRoomInstance({ id: roomId, temp });
-    const CurrentWindow = await getWindowInstance({ id: winId, temp: winId.endsWith("_temp"), title: initialTitle });
+    const CurrentWindow = await getWindowInstance({ id: winId, roomId, temp: winId.endsWith("_temp"), title: initialTitle });
     console.log({ CurrentRoom, CurrentWindow, roomId, winId, userInfo, invited });
     // 当前暂存内存中的user，id指的是当前ws连接的id，uid指的是authing的uid，和authing保持一致
     const member = {

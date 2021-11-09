@@ -66,9 +66,10 @@ io.on("connection", async (socket) => {
       break;
     case "ZOOM_WEBROWSE": {
       const {
-        roomId
+        roomId,
+        winId
       } = rest;
-      initZoomWebrowseSocket(io, socket, { roomId });
+      initZoomWebrowseSocket(io, socket, { roomId, winId });
     }
       break;
   }
@@ -85,18 +86,21 @@ server.listen(PORT, () => {
 app.get("/zoom/user/:uid", async (req, res) => {
   const { uid } = req.params;
   if (!uid) return res.json(null);
-  let room_id = null;
+  let roomId = null;
+  let winId = null;
   console.log("get zoom id with uid");
   Object.entries(Windows).forEach(([wid, win]) => {
     if (!win) return;
     console.log("get zoom id with uid:", wid, win.activeUsers);
     let us = win.activeUsers;
     if (us.findIndex((u) => u.uid == uid) > -1) {
-      room_id = wid;
+      roomId = win.roomId;
+      winId = wid;
     }
   });
   return res.json({
-    room_id
+    roomId,
+    winId
   });
 });
 app.get("/webrowse/user/active/:rid", async (req, res) => {

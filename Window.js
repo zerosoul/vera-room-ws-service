@@ -20,13 +20,14 @@ const filterMemberFields = (member = null) => {
     return tmp;
 };
 class Window {
-    constructor({ id, temp = false, title = "" }) {
+    constructor({ id, roomId, temp = false, title = "" }) {
         this.id = id;
         this.title = title;
         this.temp = temp;
         this.active = false;
         this.members = [];
         this.users = {};
+        this.roomId = roomId;
         this.room = {};
         this.tabs = null;
         this.workspaceData = null;
@@ -129,11 +130,11 @@ class Window {
     }
 
 }
-const getWindowInstance = async ({ id, temp, title = "" }) => {
+const getWindowInstance = async ({ id, roomId, temp, title = "" }) => {
     console.log("current window list", { Windows });
     if (!Windows[id]) {
         console.log("new window obj");
-        Windows[id] = new Window({ id, temp, title });
+        Windows[id] = new Window({ id, roomId, temp, title });
     }
     await Windows[id].fetchData();
     return Windows[id];
