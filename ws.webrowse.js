@@ -196,6 +196,9 @@ const initWebrowseSocket = async (io, socket, params = {}) => {
         // 广播给所有的zoom socket 连接
         io.in(`${winId}_zoom`).emit("ZOOM_WEBROWSE_DATA", { tabs: CurrentWindow.tabs || [], users: CurrentWindow.activeUsers });
     });
+    socket.on("connection_error", (err) => {
+        console.log("connection error", err.message);
+    });
     // Leave the room if the user closes the socket
     socket.on("disconnect", (reason) => {
         console.log("disconnect reason", reason);
