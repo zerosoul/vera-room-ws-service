@@ -58,7 +58,7 @@ const QUERY_WINDOW = gql`
 `;
 const WINDOW_LIST = gql`
   query Windows($room: String!) {
-    portal_window(where: {room: {_eq: $room}}) {
+    portal_window(where: {room: {_eq: $room}},order_by: {updated_at: desc}) {
       id
       title
       room
