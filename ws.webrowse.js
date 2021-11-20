@@ -1,14 +1,5 @@
 const getRoomInstance = require("./Room");
 const getWindowInstance = require("./Window");
-const {
-    gRequest,
-    // QUERY_ROOM_LIST,
-    INSERT_TABS,
-    NEW_ROOM,
-    NEW_WINDOW,
-    DELETE_TABS,
-    UPDATE_WIN_TITLE
-} = require("./graphqlClient");
 const CURRENT_USERS = "CURRENT_USERS";
 // const JOIN_MEETING = "JOIN_MEETING";
 const TAB_EVENT = "TAB_EVENT";
@@ -120,58 +111,6 @@ const initWebrowseSocket = async (io, socket, params = {}) => {
                 CurrentWindow.tabs = tabs;
             }
                 break;
-            case "KEEP_TABS": {
-                //更新覆盖数据库里的tabs
-                const { tabs } = payload;
-                if (winId.endsWith("_temp")) {
-                    // 临时window
-                    let title = CurrentWindow.title ?? `created ${new Date().toLocaleDateString("en-US")}`;
-                    if (roomId == currUser.uid) {
-                        const upsertRoom = { id: roomId, host: currUser.username };
-                        gRequest(NEW_ROOM, upsertRoom).then(({ insert_portal_room: { returning: [{ id }] } }) => {
-                            // upsert room  success
-                            gRequest(NEW_WINDOW, { room: id, title }).then(({ insert_portal_window: { returning: [{ id }] } }) => {
-                                // 创建新window成功
-                                console.log("new window id", id);
-                                gRequest(INSERT_TABS, {
-                                    tabs: tabs.map(t => {
-                                        return { ...t, window: id };
-                                    })
-                                }).then((wtf) => {
-                                    console.log("插入tabs成功", wtf);
-                                });
-                            });
-                        });
-                    } else {
-                        gRequest(NEW_WINDOW, { room: roomId, title }).then(({ insert_portal_window: { returning: [{ id }] } }) => {
-                            // 创建新window成功
-                            console.log("new window id", id);
-                            gRequest(INSERT_TABS, {
-                                tabs: tabs.map(t => {
-                                    return { ...t, window: id };
-                                })
-                            }).then((wtf) => {
-                                console.log("插入tabs成功", wtf);
-                            });
-                        });
-                    }
-                } else {
-                    // 直接覆盖式更新
-                    gRequest(DELETE_TABS, { wid: winId }).then(() => {
-                        console.log("insert new tabs");
-                        // 删除成功
-                        console.log("insert new tabs", tabs);
-                        gRequest(INSERT_TABS, {
-                            tabs: tabs.map(t => {
-                                return { ...t, window: winId };
-                            })
-                        }).then((wtf) => {
-                            console.log(wtf);
-                        });
-                    });
-                }
-            }
-                break;
             case "END_ALL": {
                 //结束房间内的所有连接 并把房间销毁
                 io.in(socketRoom).disconnectSockets();
@@ -182,14 +121,7 @@ const initWebrowseSocket = async (io, socket, params = {}) => {
                 //更新window title
                 const { title } = payload;
                 CurrentWindow.title = title;
-                if (CurrentWindow.temp) {
-                    io.in(socketRoom).emit("UPDATE_WIN_TITLE", { title });
-                } else {
-                    gRequest(UPDATE_WIN_TITLE, { id: CurrentWindow.id, title }).then((wtf) => {
-                        console.log("update window title", wtf);
-                        io.in(socketRoom).emit("UPDATE_WIN_TITLE", { title });
-                    });
-                }
+                io.in(socketRoom).emit("UPDATE_WIN_TITLE", { title });
             }
                 break;
         }
