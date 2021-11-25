@@ -1,6 +1,15 @@
 const { GraphQLClient, gql } = require("graphql-request");
 
 const gClient = new GraphQLClient("https://g.nicegoodthings.com/v1/graphql");
+const GET_INVITE_BY_RAND = gql`
+query InviteByRand($rand: String = "") {
+  portal_invite(where: {rand: {_eq: $rand}}) {
+    rand
+    data
+    id
+  }
+}
+`;
 const QUERY_ROOM_LIST = gql`
   query RoomList {
     portal_room {
@@ -182,6 +191,7 @@ const gRequest = (query, payload) =>
 
 module.exports = {
   gRequest,
+  GET_INVITE_BY_RAND,
   QUERY_ROOM_LIST,
   WINDOW_LIST,
   QUERY_ROOM,
