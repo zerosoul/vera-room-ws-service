@@ -120,6 +120,20 @@ app.get("/webrowse/user/active/:rid", async (req, res) => {
     users: room.activeUsers
   });
 });
+// get active users in window
+app.get("/webrowse/user/active/window/:wid", async (req, res) => {
+  const { wid } = req.params;
+  if (!wid) return res.json(null);
+  const win = Windows[wid];
+  if (!win) {
+    return res.json({
+      users: []
+    });
+  }
+  return res.json({
+    users: win.activeUsers
+  });
+});
 // 
 app.get("/webrowse/window/list/:rid", async (req, res) => {
   const { rid } = req.params;
