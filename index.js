@@ -88,9 +88,12 @@ server.listen(PORT, () => {
 });
 // APIs
 app.post("/authing/webhook", async (req, res) => {
-  const sig = req.headers["X-Authing-Token"];
+  const sig = req.headers["x-authing-webhook-secret"];
   console.log("authing sig", sig);
-  if (!sig) return;
+  if (!sig) {
+    res.status(401).send();
+    return;
+  }
   const { eventName, data } = req.body;
   switch (eventName) {
     case "login":
