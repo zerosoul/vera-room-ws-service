@@ -182,6 +182,22 @@ const INSERT_TABS = gql`
     }
   }
 `;
+const UPSERT_USER = gql`
+  mutation UpSertUser($objects: [portal_user_insert_input!]!) {
+    insert_portal_user(objects: $objects, on_conflict: {constraint: user_aid_key, update_columns: [username,email,nickname,avatar]}) {
+      affected_rows
+      returning {
+        aid
+        id
+        nickname
+        username
+        updated_at
+        created_at
+        avatar
+      }
+    }
+  }
+`;
 const requestHeaders = {
   "content-type": "application/json",
   "x-hasura-admin-secret": "tristan@privoce",
@@ -194,6 +210,7 @@ module.exports = {
   GET_INVITE_BY_RAND,
   QUERY_ROOM_LIST,
   WINDOW_LIST,
+  UPSERT_USER,
   QUERY_ROOM,
   QUERY_WINDOW,
   UPDATE_ACTIVE,

@@ -1,5 +1,6 @@
 require("dotenv").config();
 const http = require("http");
+const stripe = require("stripe");
 const bodyParser = require("body-parser");
 const express = require("express");
 const cors = require("cors");
@@ -8,6 +9,7 @@ const { ManagementClient } = require("authing-js-sdk");
 const { arrayChunks } = require("./utils");
 const {
   gRequest,
+  UPSERT_USER,
   GET_INVITE_BY_RAND,
   REMOVE_WINDOW,
   QUERY_ROOM_LIST,
@@ -27,7 +29,14 @@ const managementClient = new ManagementClient({
 });
 const app = express();
 app.use(cors());
-app.use(bodyParser.json());
+// Use JSON parser for all non-webhook routes
+app.use((req, res, next) => {
+  if (req.originalUrl === "/stripe/webhook") {
+    next();
+  } else {
+    express.json()(req, res, next);
+  }
+});
 const server = http.createServer(app);
 const io = socketIo(server, {
   cors: {
@@ -78,6 +87,55 @@ server.listen(PORT, () => {
   console.log(`Listening on port ${PORT}`);
 });
 // APIs
+app.post("/authing/webhook", async (req, res) => {
+  const sig = req.headers["X-Authing-Token"];
+  console.log("authing sig", sig);
+  if (!sig) return;
+  const { eventName, data } = req.body;
+  switch (eventName) {
+    case "login":
+    case "register":
+      {
+        const { id, username, photo, nickname, email } = data;
+        const result = await gRequest(UPSERT_USER, { objects: { aid: id, username: username || email, email, nickname, avatar: photo } });
+        console.log("authing webhook resp", result);
+      }
+      break;
+    // ... handle other event types
+    default:
+      console.log(`Unhandled event type ${eventName}`);
+  }
+  res.send();
+});
+// whsec_A3FOkGcphcNJ1SY2FQ4Sl4yfrEv87eIH
+const endpointSecret = "whsec_A3FOkGcphcNJ1SY2FQ4Sl4yfrEv87eIH";
+app.post("/stripe/webhook", bodyParser.raw({ type: "application/json" }), async (req, res) => {
+  const sig = req.headers["stripe-signature"];
+  console.log("stripe sig", sig);
+  let event;
+  try {
+    event = stripe.webhooks.constructEvent(req.body, sig, endpointSecret);
+  } catch (err) {
+    console.log(err.message);
+    res.status(400).send(`Webhook Error: ${err.message}`);
+    return;
+  }
+  console.log("stripe event", event.type);
+  switch (event.type) {
+    case "payment_intent.succeeded":
+      {
+        const { receipt_email } = event.data.object;
+        console.log("stripe payment succeeded receipt_email", receipt_email);
+        // Then define and call a function to handle the event payment_intent.succeeded
+      }
+      break;
+    // ... handle other event types
+    default:
+      console.log(`Unhandled event type ${event.type}`);
+  }
+  res.send();
+});
+
 app.get("/invite/:rand", async (req, res) => {
   const { rand } = req.params;
   if (!rand) return res.json(null);
