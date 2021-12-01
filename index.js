@@ -10,6 +10,7 @@ const { arrayChunks } = require("./utils");
 const {
   gRequest,
   UPSERT_USER,
+  UPDATE_USER_BY_EMAIL,
   GET_INVITE_BY_RAND,
   REMOVE_WINDOW,
   QUERY_ROOM_LIST,
@@ -111,13 +112,12 @@ app.post("/authing/webhook", async (req, res) => {
   res.send();
 });
 // whsec_A3FOkGcphcNJ1SY2FQ4Sl4yfrEv87eIH
-const endpointSecret = "whsec_A3FOkGcphcNJ1SY2FQ4Sl4yfrEv87eIH";
 app.post("/stripe/webhook", bodyParser.raw({ type: "application/json" }), async (req, res) => {
   const sig = req.headers["stripe-signature"];
   console.log("stripe sig", sig);
   let event;
   try {
-    event = stripe.webhooks.constructEvent(req.body, sig, endpointSecret);
+    event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_SECRET);
   } catch (err) {
     console.log(err.message);
     res.status(400).send(`Webhook Error: ${err.message}`);
@@ -128,7 +128,13 @@ app.post("/stripe/webhook", bodyParser.raw({ type: "application/json" }), async 
     case "payment_intent.succeeded":
       {
         const { receipt_email } = event.data.object;
-        console.log("stripe payment succeeded receipt_email", receipt_email);
+        if (!receipt_email) {
+          console.log("email null");
+          return;
+        }
+        const result = await gRequest(UPDATE_USER_BY_EMAIL, { email: receipt_email });
+
+        console.log("stripe payment succeeded receipt_email", receipt_email, result);
         // Then define and call a function to handle the event payment_intent.succeeded
       }
       break;

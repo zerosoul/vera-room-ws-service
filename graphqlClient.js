@@ -198,6 +198,18 @@ const UPSERT_USER = gql`
     }
   }
 `;
+const UPDATE_USER_BY_EMAIL = gql`
+mutation UpsertByEmail($email: String, ) {
+  update_portal_user(where: {email: {_eq: $email}}, _set: {level: 1}) {
+    affected_rows
+    returning {
+      level
+      id
+      email
+    }
+  }
+}
+`;
 const requestHeaders = {
   "content-type": "application/json",
   "x-hasura-admin-secret": "tristan@privoce",
@@ -210,6 +222,7 @@ module.exports = {
   GET_INVITE_BY_RAND,
   QUERY_ROOM_LIST,
   WINDOW_LIST,
+  UPDATE_USER_BY_EMAIL,
   UPSERT_USER,
   QUERY_ROOM,
   QUERY_WINDOW,
