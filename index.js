@@ -153,14 +153,13 @@ app.get("/invite/:rand", async (req, res) => {
   if (obj) {
     const { data = "" } = obj;
     const [roomId, winId] = data.split("|");
-    console.log(result?.portal_invite);
     const result = await gRequest(QUERY_WINDOW, { id: winId });
     const win = Windows[winId];
     return res.json({
       roomId,
       winId,
-      win: result?.portal_window,
-      activeUsers: win?.activeUsers
+      win: result?.portal_window[0],
+      activeUsers: win?.activeUsers || []
     });
   } else {
     return res.json(null);
