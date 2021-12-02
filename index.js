@@ -150,8 +150,21 @@ app.get("/invite/:rand", async (req, res) => {
   if (!rand) return res.json(null);
   const result = await gRequest(GET_INVITE_BY_RAND, { rand });
   const [obj = null] = result?.portal_invite || [];
-  console.log(result?.portal_invite);
-  return res.json(obj);
+  if (obj) {
+    const { data = "" } = obj;
+    const [roomId, winId] = data.split("|");
+    console.log(result?.portal_invite);
+    const result = await gRequest(QUERY_WINDOW, { id: winId });
+    const win = Windows[winId];
+    return res.json({
+      roomId,
+      winId,
+      win: result?.portal_window,
+      activeUsers: win?.activeUsers
+    });
+  } else {
+    return res.json(null);
+  }
 
 });
 app.get("/zoom/user/:uid", async (req, res) => {
