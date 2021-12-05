@@ -128,8 +128,13 @@ const initWebrowseSocket = async (io, socket, params = {}) => {
         // 广播给所有的zoom socket 连接
         io.in(`${winId}_zoom`).emit("ZOOM_WEBROWSE_DATA", { tabs: CurrentWindow.tabs || [], users: CurrentWindow.activeUsers });
     });
-    socket.on("connection_error", (err) => {
+    socket.on("error", (err) => {
         console.log("connection error", err.message);
+        // clear connection data
+        CurrentWindow.removeActiveUser(socket.id);
+        socket.broadcast.in(socketRoom).emit(UPDATE_USERS, { users: CurrentWindow.activeUsers });
+        io.in(socketRoom).emit(USER_LEAVE, currUser);
+        socket.leave(socketRoom);
     });
     // Leave the room if the user closes the socket
     socket.on("disconnect", (reason) => {
