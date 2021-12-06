@@ -62,6 +62,11 @@ const QUERY_WINDOW = gql`
         url
         icon
       }
+      user{
+        id
+        level
+        username
+      }
     }
   }
 `;
