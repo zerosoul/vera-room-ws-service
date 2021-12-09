@@ -99,6 +99,7 @@ app.post("/authing/webhook", async (req, res) => {
   switch (eventName) {
     case "login":
     case "register":
+    case "user:updated":
       {
         const { id, username, photo, nickname, email } = data;
         const result = await gRequest(UPSERT_USER, { objects: { aid: id, username: username || email, email, nickname, avatar: photo } });
