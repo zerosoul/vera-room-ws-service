@@ -1,7 +1,7 @@
 require("dotenv").config();
 const http = require("http");
-const stripe = require("stripe");
-const bodyParser = require("body-parser");
+const stripe = require("stripe")(process.env.STRIPE_SECRET);
+// const bodyParser = require("body-parser");
 const express = require("express");
 const cors = require("cors");
 const socketIo = require("socket.io");
@@ -10,7 +10,7 @@ const { arrayChunks } = require("./utils");
 const {
   gRequest,
   UPSERT_USER,
-  UPDATE_USER_BY_EMAIL,
+  UPDATE_USER_BY_AID,
   GET_INVITE_BY_RAND,
   REMOVE_WINDOW,
   QUERY_ROOM_LIST,
@@ -31,13 +31,8 @@ const managementClient = new ManagementClient({
 const app = express();
 app.use(cors());
 // Use JSON parser for all non-webhook routes
-app.use((req, res, next) => {
-  if (req.originalUrl === "/stripe/webhook") {
-    next();
-  } else {
-    express.json()(req, res, next);
-  }
-});
+app.use("/stripe/webhook", express.raw({ type: "*/*" }));
+app.use(express.json());
 const server = http.createServer(app);
 const io = socketIo(server, {
   cors: {
@@ -112,10 +107,9 @@ app.post("/authing/webhook", async (req, res) => {
   }
   res.send();
 });
-// whsec_A3FOkGcphcNJ1SY2FQ4Sl4yfrEv87eIH
-app.post("/stripe/webhook", bodyParser.raw({ type: "application/json" }), async (req, res) => {
+app.post("/stripe/webhook", async (req, res) => {
   const sig = req.headers["stripe-signature"];
-  console.log("stripe sig", sig);
+  console.log("stripe sig", sig, req.body);
   let event;
   try {
     event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_SECRET);
@@ -128,14 +122,15 @@ app.post("/stripe/webhook", bodyParser.raw({ type: "application/json" }), async 
   switch (event.type) {
     case "payment_intent.succeeded":
       {
-        const { receipt_email } = event.data.object;
-        if (!receipt_email) {
-          console.log("email null");
+        console.log("event data", JSON.stringify(event.data));
+        const { customer } = event.data.object;
+        if (!customer && customer?.metadata?.aid) {
+          console.log("metadata null");
           return;
         }
-        const result = await gRequest(UPDATE_USER_BY_EMAIL, { email: receipt_email });
+        const result = await gRequest(UPDATE_USER_BY_AID, { aid: customer.metadata.aid });
 
-        console.log("stripe payment succeeded receipt_email", receipt_email, result);
+        console.log("stripe payment succeeded receipt_email", result);
         // Then define and call a function to handle the event payment_intent.succeeded
       }
       break;
@@ -144,6 +139,37 @@ app.post("/stripe/webhook", bodyParser.raw({ type: "application/json" }), async 
       console.log(`Unhandled event type ${event.type}`);
   }
   res.send();
+});
+app.post("/subscription/create", async (req, res) => {
+  const { user, priceId } = req.body;
+  const { email, username, id } = user || {};
+  const customer = await stripe.customers.create({
+    email,
+    metadata: {
+      aid: id, username
+    }
+  });
+  try {
+    // Create the subscription. Note we're expanding the Subscription's
+    // latest invoice and that invoice's payment_intent
+    // so we can pass it to the front end to confirm the payment
+    const subscription = await stripe.subscriptions.create({
+      customer: customer.id,
+      items: [{
+        price: priceId,
+      }],
+      payment_behavior: "default_incomplete",
+      expand: ["latest_invoice.payment_intent"],
+    });
+
+    res.send({
+      customer: { id: customer.id, metadata: customer.metadata },
+      subscriptionId: subscription.id,
+      clientSecret: subscription.latest_invoice.payment_intent.client_secret,
+    });
+  } catch (error) {
+    return res.status(400).send({ error: { message: error.message } });
+  }
 });
 
 app.get("/invite/:rand", async (req, res) => {

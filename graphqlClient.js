@@ -203,11 +203,12 @@ const UPSERT_USER = gql`
     }
   }
 `;
-const UPDATE_USER_BY_EMAIL = gql`
-mutation UpsertByEmail($email: String, ) {
-  update_portal_user(where: {email: {_eq: $email}}, _set: {level: 1}) {
+const UPDATE_USER_BY_AID = gql`
+mutation UpsertByEmail($aid: String, ) {
+  update_portal_user(where: {aid: {_eq: $aid}}, _set: {level: 1}) {
     affected_rows
     returning {
+      aid
       level
       id
       email
@@ -227,7 +228,7 @@ module.exports = {
   GET_INVITE_BY_RAND,
   QUERY_ROOM_LIST,
   WINDOW_LIST,
-  UPDATE_USER_BY_EMAIL,
+  UPDATE_USER_BY_AID,
   UPSERT_USER,
   QUERY_ROOM,
   QUERY_WINDOW,
