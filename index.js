@@ -149,26 +149,40 @@ app.post("/subscription/create", async (req, res) => {
       aid: id, username
     }
   });
+  // Create new Checkout Session for the order
+  // Other optional params include:
+  // [billing_address_collection] - to display billing address details on the page
+  // [customer] - if you have an existing Stripe Customer ID
+  // [customer_email] - lets you prefill the email input in the form
+  // [automatic_tax] - to automatically calculate sales tax, VAT and GST in the checkout page
+  // For full details see https://stripe.com/docs/api/checkout/sessions/create
   try {
-    // Create the subscription. Note we're expanding the Subscription's
-    // latest invoice and that invoice's payment_intent
-    // so we can pass it to the front end to confirm the payment
-    const subscription = await stripe.subscriptions.create({
+    const session = await stripe.checkout.sessions.create({
+      mode: "subscription",
+      payment_method_types: ["card"],
       customer: customer.id,
-      items: [{
-        price: priceId,
-      }],
-      payment_behavior: "default_incomplete",
-      expand: ["latest_invoice.payment_intent"],
+      // customer_email: email,
+      line_items: [
+        {
+          price: priceId,
+          quantity: 1,
+        },
+      ],
+      // ?session_id={CHECKOUT_SESSION_ID} means the redirect will have the session ID set as a query param
+      success_url: "https://webrow.se/payment_success?session_id={CHECKOUT_SESSION_ID}",
+      cancel_url: "https://webrow.se/payment_canceled",
+      // automatic_tax: { enabled: true }
     });
-
     res.send({
-      customer: { id: customer.id, metadata: customer.metadata },
-      subscriptionId: subscription.id,
-      clientSecret: subscription.latest_invoice.payment_intent.client_secret,
+      session_url: session.url
     });
-  } catch (error) {
-    return res.status(400).send({ error: { message: error.message } });
+  } catch (e) {
+    res.status(400);
+    return res.send({
+      error: {
+        message: e.message,
+      }
+    });
   }
 });
 
