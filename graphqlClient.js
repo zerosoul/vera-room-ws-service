@@ -204,8 +204,8 @@ const UPSERT_USER = gql`
   }
 `;
 const UPDATE_USER_BY_AID = gql`
-mutation UpsertByEmail($aid: String, ) {
-  update_portal_user(where: {aid: {_eq: $aid}}, _set: {level: 1}) {
+mutation UpsertByEmail($aid: String, $customer: String ) {
+  update_portal_user(where: {aid: {_eq: $aid}}, _set: {level: 1, customer: $customer}) {
     affected_rows
     returning {
       aid

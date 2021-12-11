@@ -1,7 +1,7 @@
 require("dotenv").config();
 const http = require("http");
 const stripe = require("stripe")(process.env.STRIPE_SECRET);
-// const bodyParser = require("body-parser");
+const bodyParser = require("body-parser");
 const express = require("express");
 const cors = require("cors");
 const socketIo = require("socket.io");
@@ -30,9 +30,15 @@ const managementClient = new ManagementClient({
 });
 const app = express();
 app.use(cors());
-// Use JSON parser for all non-webhook routes
-app.use("/stripe/webhook", express.raw({ type: "*/*" }));
-app.use(express.json());
+app.use(bodyParser.json({
+  // Because Stripe needs the raw body, we compute it but only when hitting the Stripe callback URL.
+  verify: function (req, res, buf) {
+    var url = req.originalUrl;
+    if (url.startsWith("/stripe/webhook")) {
+      req.rawBody = buf.toString();
+    }
+  }
+}));
 const server = http.createServer(app);
 const io = socketIo(server, {
   cors: {
@@ -109,10 +115,10 @@ app.post("/authing/webhook", async (req, res) => {
 });
 app.post("/stripe/webhook", async (req, res) => {
   const sig = req.headers["stripe-signature"];
-  console.log("stripe sig", sig, req.body);
+  console.log("stripe sig", sig, req.rawBody);
   let event;
   try {
-    event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_SECRET);
+    event = stripe.webhooks.constructEvent(req.rawBody, sig, process.env.STRIPE_WEBHOOK_SECRET);
   } catch (err) {
     console.log(err.message);
     res.status(400).send(`Webhook Error: ${err.message}`);
@@ -122,15 +128,18 @@ app.post("/stripe/webhook", async (req, res) => {
   switch (event.type) {
     case "payment_intent.succeeded":
       {
-        console.log("event data", JSON.stringify(event.data));
         const { customer } = event.data.object;
-        if (!customer && customer?.metadata?.aid) {
-          console.log("metadata null");
-          return;
+        console.log("event data", customer);
+        if (customer) {
+          const c = await stripe.customers.retrieve(
+            customer
+          );
+          const { aid } = c.metadata;
+          if (aid) {
+            const result = await gRequest(UPDATE_USER_BY_AID, { aid, customer });
+            console.log("stripe payment succeeded receipt_email", result);
+          }
         }
-        const result = await gRequest(UPDATE_USER_BY_AID, { aid: customer.metadata.aid });
-
-        console.log("stripe payment succeeded receipt_email", result);
         // Then define and call a function to handle the event payment_intent.succeeded
       }
       break;
