@@ -52,6 +52,8 @@ const initWebrowseSocket = async (io, socket, params = {}) => {
     socket.emit(CURRENT_USERS, { title, room: { id: CurrentRoom.id, name: CurrentRoom.name, temp, members }, workspaceData: CurrentWindow.workspaceData, users: CurrentWindow.activeUsers });
     // 广播给其它人：更新活跃用户
     socket.broadcast.in(socketRoom).emit(UPDATE_USERS, { users: CurrentWindow.activeUsers });
+    // 向房间内其它人广播新加入的用户
+    socket.broadcast.in(socketRoom).emit(USER_ENTER, currUser);
     // new user
     socket.on("message", (data) => {
         console.log(data);
