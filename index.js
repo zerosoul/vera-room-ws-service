@@ -113,6 +113,22 @@ app.post("/authing/webhook", async (req, res) => {
   }
   res.send();
 });
+app.get("/stripe/portal/:customer", async (req, res) => {
+  const { customer } = req.params;
+  const ctm = await stripe.customers.retrieve(
+    customer, {
+    expand: ["subscriptions"]
+  }
+  );
+  const session = await stripe.billingPortal.sessions.create({
+    customer,
+    return_url: "https://webrow.se",
+  });
+  res.send({
+    customer: ctm,
+    session
+  });
+});
 app.post("/stripe/webhook", async (req, res) => {
   const sig = req.headers["stripe-signature"];
   console.log("stripe sig", sig, req.rawBody);
@@ -149,6 +165,7 @@ app.post("/stripe/webhook", async (req, res) => {
   }
   res.send();
 });
+
 app.post("/subscription/create", async (req, res) => {
   const { user, priceId } = req.body;
   const { email, username, id } = user || {};

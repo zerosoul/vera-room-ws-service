@@ -1,6 +1,6 @@
 const { GraphQLClient, gql } = require("graphql-request");
 
-const gClient = new GraphQLClient("https://g.nicegoodthings.com/v1/graphql");
+const gClient = new GraphQLClient(process.env.GRAPHQL_ENDPOINT);
 const GET_INVITE_BY_RAND = gql`
 query InviteByRand($rand: String = "") {
   portal_invite(where: {rand: {_eq: $rand}}) {
@@ -218,7 +218,7 @@ mutation UpsertByEmail($aid: String, $customer: String ) {
 `;
 const requestHeaders = {
   "content-type": "application/json",
-  "x-hasura-admin-secret": "tristan@privoce",
+  "x-hasura-admin-secret": process.env.GRAPHQL_SECRET,
 };
 const gRequest = (query, payload) =>
   gClient.request(query, payload, requestHeaders);
