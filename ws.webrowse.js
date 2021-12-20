@@ -55,7 +55,7 @@ const initWebrowseSocket = async (io, socket, params = {}) => {
     // 向房间内其它人广播新加入的用户
     socket.broadcast.in(socketRoom).emit(USER_ENTER, currUser);
     // new user
-    socket.on("message", (data) => {
+    socket.on("message", async (data) => {
         console.log(data);
         const { cmd = USER_ENTER, payload = {} } = data;
         console.log({ payload });
@@ -131,8 +131,11 @@ const initWebrowseSocket = async (io, socket, params = {}) => {
                 const { site, index } = payload;
                 let currHost = CurrentWindow.activeUsers.find(u => u.host);
                 if (currHost) {
-                    const hostSocket = io.sockets.get(currHost.id);
-                    hostSocket?.emit("ACCESS_TIP", { site, index });
+                    const sockets = await io.in(socketRoom).fetchSockets();
+                    const hostSocket = sockets.find(s => s.id == currHost.id);
+                    if (hostSocket) {
+                        hostSocket.emit("ACCESS_TIP", { site, index });
+                    }
                 }
             }
                 break;
