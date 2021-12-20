@@ -126,6 +126,13 @@ const initWebrowseSocket = async (io, socket, params = {}) => {
                 io.in(socketRoom).emit("UPDATE_WIN_TITLE", { title });
             }
                 break;
+            case "ACCESS_TIP": {
+                //提醒host有access权限问题
+                const { title } = payload;
+                CurrentWindow.title = title;
+                io.in(socketRoom).emit("UPDATE_WIN_TITLE", { title });
+            }
+                break;
         }
         // 广播给所有的zoom socket 连接
         io.in(`${winId}_zoom`).emit("ZOOM_WEBROWSE_DATA", { tabs: CurrentWindow.tabs || [], users: CurrentWindow.activeUsers });
