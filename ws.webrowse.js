@@ -128,9 +128,12 @@ const initWebrowseSocket = async (io, socket, params = {}) => {
                 break;
             case "ACCESS_TIP": {
                 //提醒host有access权限问题
-                const { title } = payload;
-                CurrentWindow.title = title;
-                io.in(socketRoom).emit("UPDATE_WIN_TITLE", { title });
+                const { site, index } = payload;
+                let currHost = CurrentWindow.activeUsers.find(u => u.host);
+                if (currHost) {
+                    const hostSocket = io.sockets.get(currHost.id);
+                    hostSocket?.emit("ACCESS_TIP", { site, index });
+                }
             }
                 break;
         }
