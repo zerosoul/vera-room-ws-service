@@ -141,8 +141,7 @@ const initWebrowseSocket = async (io, socket, params = {}) => {
                 break;
             case "HOST_CURSOR": {
                 //广播给其它人
-                const { x, y, index } = payload;
-                socket.broadcast.in(socketRoom).emit("HOST_CURSOR", { x, y, index });
+                socket.broadcast.in(socketRoom).emit("HOST_CURSOR", payload);
             }
                 break;
         }
