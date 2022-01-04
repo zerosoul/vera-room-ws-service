@@ -149,22 +149,22 @@ const initWebrowseSocket = async (io, socket, params = {}) => {
         io.in(`${winId}_zoom`).emit("ZOOM_WEBROWSE_DATA", { tabs: CurrentWindow.tabs || [], users: CurrentWindow.activeUsers });
     });
     socket.on("error", (err) => {
+        socket.leave(socketRoom);
         console.log("connection error", err.message);
         // clear connection data
         CurrentWindow.removeActiveUser(socket.id);
         socket.broadcast.in(socketRoom).emit(UPDATE_USERS, { users: CurrentWindow.activeUsers });
         io.in(socketRoom).emit(USER_LEAVE, currUser);
-        socket.leave(socketRoom);
     });
     // Leave the room if the user closes the socket
     socket.on("disconnect", (reason) => {
+        socket.leave(socketRoom);
         console.log("disconnect reason", reason);
         // ping timeout 先忽略？
         // if (reason == "ping timeout") return;
         CurrentWindow.removeActiveUser(socket.id);
         socket.broadcast.in(socketRoom).emit(UPDATE_USERS, { users: CurrentWindow.activeUsers });
         io.in(socketRoom).emit(USER_LEAVE, currUser);
-        socket.leave(socketRoom);
     });
 };
 module.exports = { initWebrowseSocket };
