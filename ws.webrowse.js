@@ -24,6 +24,7 @@ const initWebrowseSocket = async (io, socket, params = {}) => {
         photo: userInfo.photo,
         username: userInfo.username,
         activeIndex: 0,
+        intUid: +userInfo.intUid || 0,
         // peerId 非空，则代表webrtc连接建立
     };
     CurrentWindow.appendMember(member);
