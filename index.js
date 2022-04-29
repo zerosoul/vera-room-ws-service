@@ -16,13 +16,15 @@ const {
   QUERY_ROOM_LIST,
   WINDOW_LIST,
   QUERY_WINDOW,
-  NEW_WINDOW, INSERT_TABS
+  NEW_WINDOW,
+  INSERT_TABS,
 } = require("./graphqlClient");
 const { initVeraSocket } = require("./ws.vera");
 const { initWebrowseSocket } = require("./ws.webrowse");
 const { initZoomWebrowseSocket } = require("./ws.zoom.webrowse");
 const { Rooms } = require("./Room");
 const { Windows } = require("./Window");
+const { default: axios } = require("axios");
 
 const managementClient = new ManagementClient({
   userPoolId: "6034a31382f5d09e3b5a15fa",
@@ -30,15 +32,17 @@ const managementClient = new ManagementClient({
 });
 const app = express();
 app.use(cors());
-app.use(bodyParser.json({
-  // Because Stripe needs the raw body, we compute it but only when hitting the Stripe callback URL.
-  verify: function (req, res, buf) {
-    var url = req.originalUrl;
-    if (url.startsWith("/stripe/webhook")) {
-      req.rawBody = buf.toString();
-    }
-  }
-}));
+app.use(
+  bodyParser.json({
+    // Because Stripe needs the raw body, we compute it but only when hitting the Stripe callback URL.
+    verify: function (req, res, buf) {
+      var url = req.originalUrl;
+      if (url.startsWith("/stripe/webhook")) {
+        req.rawBody = buf.toString();
+      }
+    },
+  })
+);
 const server = http.createServer(app);
 const io = socketIo(server, {
   cors: {
@@ -48,7 +52,7 @@ const io = socketIo(server, {
   },
   upgradeTimeout: 40000,
   pingTimeout: 25000,
-  pingInterval: 5000
+  pingInterval: 5000,
 });
 
 const PORT = 4000;
@@ -56,31 +60,39 @@ const PORT = 4000;
 io.on("connection", async (socket) => {
   console.log(`${socket.id} connected`);
   // Join a room
-  const {
-    type = "VERA", ...rest
-  } = socket.handshake.query || {};
+  const { type = "VERA", ...rest } = socket.handshake.query || {};
   switch (type) {
-    case "VERA": {
-      const {
-        roomId, temp = false, link, peerId, ...userInfo
-      } = rest;
-      initVeraSocket(io, socket, { roomId, temp, link, peerId, userInfo });
-    }
+    case "VERA":
+      {
+        const { roomId, temp = false, link, peerId, ...userInfo } = rest;
+        initVeraSocket(io, socket, { roomId, temp, link, peerId, userInfo });
+      }
       break;
-    case "WEBROWSE": {
-      const {
-        roomId, winId, temp = false, title = "", invited, ...userInfo
-      } = rest;
-      initWebrowseSocket(io, socket, { roomId, invited, winId, temp, title, userInfo });
-    }
+    case "WEBROWSE":
+      {
+        const {
+          roomId,
+          winId,
+          temp = false,
+          title = "",
+          invited,
+          ...userInfo
+        } = rest;
+        initWebrowseSocket(io, socket, {
+          roomId,
+          invited,
+          winId,
+          temp,
+          title,
+          userInfo,
+        });
+      }
       break;
-    case "ZOOM_WEBROWSE": {
-      const {
-        roomId,
-        winId
-      } = rest;
-      initZoomWebrowseSocket(io, socket, { roomId, winId });
-    }
+    case "ZOOM_WEBROWSE":
+      {
+        const { roomId, winId } = rest;
+        initZoomWebrowseSocket(io, socket, { roomId, winId });
+      }
       break;
   }
 });
@@ -102,8 +114,17 @@ app.post("/authing/webhook", async (req, res) => {
     case "register":
     case "user:updated":
       {
-        const { id, username, photo, nickname, email } = eventName == "user:updated" ? data.user : data;
-        const result = await gRequest(UPSERT_USER, { objects: { aid: id, username: username, email, nickname, avatar: photo } });
+        const { id, username, photo, nickname, email } =
+          eventName == "user:updated" ? data.user : data;
+        const result = await gRequest(UPSERT_USER, {
+          objects: {
+            aid: id,
+            username: username,
+            email,
+            nickname,
+            avatar: photo,
+          },
+        });
         console.log("authing webhook resp", result);
       }
       break;
@@ -115,18 +136,16 @@ app.post("/authing/webhook", async (req, res) => {
 });
 app.get("/stripe/portal/:customer", async (req, res) => {
   const { customer } = req.params;
-  const ctm = await stripe.customers.retrieve(
-    customer, {
-    expand: ["subscriptions"]
-  }
-  );
+  const ctm = await stripe.customers.retrieve(customer, {
+    expand: ["subscriptions"],
+  });
   const session = await stripe.billingPortal.sessions.create({
     customer,
     return_url: "https://webrow.se",
   });
   res.send({
     customer: ctm,
-    session
+    session,
   });
 });
 app.post("/stripe/webhook", async (req, res) => {
@@ -134,7 +153,11 @@ app.post("/stripe/webhook", async (req, res) => {
   console.log("stripe sig", sig, req.rawBody);
   let event;
   try {
-    event = stripe.webhooks.constructEvent(req.rawBody, sig, process.env.STRIPE_WEBHOOK_SECRET);
+    event = stripe.webhooks.constructEvent(
+      req.rawBody,
+      sig,
+      process.env.STRIPE_WEBHOOK_SECRET
+    );
   } catch (err) {
     console.log(err.message);
     res.status(400).send(`Webhook Error: ${err.message}`);
@@ -147,12 +170,13 @@ app.post("/stripe/webhook", async (req, res) => {
         const { customer } = event.data.object;
         console.log("event data", customer);
         if (customer) {
-          const c = await stripe.customers.retrieve(
-            customer
-          );
+          const c = await stripe.customers.retrieve(customer);
           const { aid } = c.metadata;
           if (aid) {
-            const result = await gRequest(UPDATE_USER_BY_AID, { aid, customer });
+            const result = await gRequest(UPDATE_USER_BY_AID, {
+              aid,
+              customer,
+            });
             console.log("stripe payment succeeded receipt_email", result);
           }
         }
@@ -172,8 +196,9 @@ app.post("/subscription/create", async (req, res) => {
   const customer = await stripe.customers.create({
     email,
     metadata: {
-      aid: id, username
-    }
+      aid: id,
+      username,
+    },
   });
   // Create new Checkout Session for the order
   // Other optional params include:
@@ -195,23 +220,48 @@ app.post("/subscription/create", async (req, res) => {
         },
       ],
       // ?session_id={CHECKOUT_SESSION_ID} means the redirect will have the session ID set as a query param
-      success_url: "https://webrow.se/payment_success?session_id={CHECKOUT_SESSION_ID}",
+      success_url:
+        "https://webrow.se/payment_success?session_id={CHECKOUT_SESSION_ID}",
       cancel_url: "https://webrow.se/payment_canceled",
       // automatic_tax: { enabled: true }
     });
     res.send({
-      session_url: session.url
+      session_url: session.url,
     });
   } catch (e) {
     res.status(400);
     return res.send({
       error: {
         message: e.message,
-      }
+      },
     });
   }
 });
-
+// rustchat 第三方登录，拿token
+app.get("/rustchat/oauth/:uid/:uname", async (req, res) => {
+  const { uid, uname } = req.params;
+  if (!uid || !uname) return res.json(null);
+  try {
+    const resp = await axios.post(
+      "https://dev.rustchat.com/api/token/create_third_party_key",
+      { userid: uid, username: uname },
+      {
+        headers: {
+          "Content-Type": "application/json",
+          "X-SECRET": process.env.RUSTCHAT_SECRET,
+        },
+      }
+    );
+    console.log("rustchat", resp.data);
+    return res.json({
+      link: `https://privoce.rustchat.com/#/oauth/${resp.data}`,
+      token: resp.data,
+    });
+  } catch (error) {
+    console.log("rustchat err", error);
+    return res.json(null);
+  }
+});
 app.get("/invite/:rand", async (req, res) => {
   const { rand } = req.params;
   if (!rand) return res.json(null);
@@ -226,12 +276,11 @@ app.get("/invite/:rand", async (req, res) => {
       roomId,
       winId,
       win: result?.portal_window[0],
-      activeUsers: win?.activeUsers || []
+      activeUsers: win?.activeUsers || [],
     });
   } else {
     return res.json(null);
   }
-
 });
 app.get("/zoom/user/:uid", async (req, res) => {
   const { uid } = req.params;
@@ -250,7 +299,7 @@ app.get("/zoom/user/:uid", async (req, res) => {
   });
   return res.json({
     roomId,
-    winId
+    winId,
   });
 });
 app.get("/webrowse/user/active/:rid", async (req, res) => {
@@ -259,11 +308,11 @@ app.get("/webrowse/user/active/:rid", async (req, res) => {
   const room = Rooms[rid];
   if (!room) {
     return res.json({
-      users: []
+      users: [],
     });
   }
   return res.json({
-    users: room.activeUsers
+    users: room.activeUsers,
   });
 });
 // get active users in window
@@ -273,36 +322,35 @@ app.get("/webrowse/user/active/window/:wid", async (req, res) => {
   const win = Windows[wid];
   if (!win) {
     return res.json({
-      users: []
+      users: [],
     });
   }
   return res.json({
-    users: win.activeUsers
+    users: win.activeUsers,
   });
 });
-// 
+//
 app.get("/webrowse/window/list/:rid", async (req, res) => {
   const { rid } = req.params;
   if (!rid) return res.json(null);
   const result = await gRequest(WINDOW_LIST, { room: rid });
   const windows = result?.portal_window;
   return res.json({
-    windows
+    windows,
   });
 });
 app.get("/webrowse/window/:wid", async (req, res) => {
   const { wid } = req.params;
   if (!wid) return res.json(null);
   try {
-
     const result = await gRequest(QUERY_WINDOW, { id: wid });
     const window = result?.portal_window;
     return res.json({
-      window
+      window,
     });
   } catch (error) {
     return res.json({
-      window: null
+      window: null,
     });
   }
 });
@@ -315,12 +363,12 @@ app.delete("/webrowse/window/:wid", async (req, res) => {
     console.log("remove return", result);
     const id = result?.delete_portal_window?.returning[0]?.id;
     return res.json({
-      id
+      id,
     });
   } catch (error) {
     console.log("remove window error", error);
     return res.json({
-      id: null
+      id: null,
     });
   }
 });
@@ -334,18 +382,18 @@ app.post("/webrowse/window", async (req, res) => {
     if (result.insert_portal_window?.returning[0]?.id) {
       const id = result.insert_portal_window?.returning[0]?.id;
       gRequest(INSERT_TABS, {
-        tabs: tabs.map(t => {
+        tabs: tabs.map((t) => {
           return { ...t, window: id };
-        })
+        }),
       });
       return res.json({
-        id: result.insert_portal_window?.returning[0]?.id
+        id: result.insert_portal_window?.returning[0]?.id,
       });
     }
   } catch (error) {
     console.log({ error });
     return res.json({
-      id: null
+      id: null,
     });
   }
 });
@@ -356,24 +404,30 @@ app.get("/members/authing/:username", async (req, res) => {
   const result = await gRequest(QUERY_ROOM_LIST, {});
   const rooms = result?.portal_room;
   const seen = new Set();
-  const users = rooms.filter((r) => {
-    return (r.host == username) || (r.members && r.members.some((m) => m.username == username));
-  }
-  ).map((room) => room.members).flat().filter((m) => {
-    if (!m.id || m.username == username) return false;
-    const duplicate = seen.has(m.id);
-    seen.add(m.id);
-    return !duplicate;
-  });
+  const users = rooms
+    .filter((r) => {
+      return (
+        r.host == username ||
+        (r.members && r.members.some((m) => m.username == username))
+      );
+    })
+    .map((room) => room.members)
+    .flat()
+    .filter((m) => {
+      if (!m.id || m.username == username) return false;
+      const duplicate = seen.has(m.id);
+      seen.add(m.id);
+      return !duplicate;
+    });
   let udfs = {};
   try {
     let userIds = users.map((u) => u.uid);
     let chunks = arrayChunks(userIds, 10);
-    let results = await Promise.all(chunks.map((ids) => {
-      return managementClient.users.getUdfValueBatch(
-        ids
-      );
-    }));
+    let results = await Promise.all(
+      chunks.map((ids) => {
+        return managementClient.users.getUdfValueBatch(ids);
+      })
+    );
     // udfs = await managementClient.users.getUdfValueBatch(
     //   users.map((u) => u.uid),
     // );
@@ -387,4 +441,3 @@ app.get("/members/authing/:username", async (req, res) => {
     data: users.map((u) => ({ ...u, traceId: udfs[u.uid].notification || "" })),
   });
 });
-
