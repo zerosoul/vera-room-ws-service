@@ -237,28 +237,28 @@ app.post("/subscription/create", async (req, res) => {
     });
   }
 });
-// rustchat 第三方登录，拿token
-app.get("/rustchat/oauth/:uid/:uname", async (req, res) => {
+// voce 第三方登录，拿token
+app.get("/voce/oauth/:uid/:uname", async (req, res) => {
   const { uid, uname } = req.params;
   if (!uid || !uname) return res.json(null);
   try {
     const resp = await axios.post(
-      "https://dev.rustchat.com/api/token/create_third_party_key",
+      "https://dev.voce.chat/api/token/create_third_party_key",
       { userid: uid, username: uname },
       {
         headers: {
           "Content-Type": "application/json",
-          "X-SECRET": process.env.RUSTCHAT_SECRET,
+          "X-SECRET": process.env.VOCE_SECRET,
         },
       }
     );
-    console.log("rustchat", resp.data);
+    console.log("voce", resp.data);
     return res.json({
-      link: `https://privoce.rustchat.com/#/oauth/${resp.data}`,
+      link: `https://privoce.voce.chat/#/oauth/${resp.data}`,
       token: resp.data,
     });
   } catch (error) {
-    console.log("rustchat err", error);
+    console.log("voce err", error);
     return res.json(null);
   }
 });

@@ -10,25 +10,25 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "authing-js-sdk": "^4.23.3",
+    "authing-js-sdk": "^4.23.35",
     "axios": "^0.27.2",
-    "body-parser": "^1.19.1",
+    "body-parser": "^1.20.0",
     "cors": "^2.8.5",
-    "dotenv": "^10.0.0",
-    "express": "^4.17.1",
-    "graphql": "^16.1.0",
-    "graphql-request": "^3.7.0",
-    "nodemon": "^2.0.15",
-    "socket.io": "^4.4.0",
-    "stripe": "^8.194.0",
+    "dotenv": "^16.0.1",
+    "express": "^4.18.1",
+    "graphql": "^16.5.0",
+    "graphql-request": "^4.3.0",
+    "nodemon": "^2.0.19",
+    "socket.io": "^4.5.1",
+    "stripe": "^9.16.0",
     "uuid": "^8.3.2"
   },
   "devDependencies": {
-    "eslint": "^8.4.1",
+    "eslint": "^8.21.0",
     "eslint-config-airbnb-base": "^15.0.0",
-    "eslint-config-prettier": "^8.3.0",
-    "eslint-plugin-import": "^2.25.3",
-    "eslint-plugin-prettier": "^4.0.0",
-    "prettier": "^2.5.1"
+    "eslint-config-prettier": "^8.5.0",
+    "eslint-plugin-import": "^2.26.0",
+    "eslint-plugin-prettier": "^4.2.1",
+    "prettier": "^2.7.1"
   }
 }
