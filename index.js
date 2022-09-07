@@ -238,12 +238,13 @@ app.post("/subscription/create", async (req, res) => {
   }
 });
 // voce 第三方登录，拿token
+const third_domain = "webrowse.voce.chat";
 app.get("/voce/oauth/:uid/:uname", async (req, res) => {
   const { uid, uname } = req.params;
   if (!uid || !uname) return res.json(null);
   try {
     const resp = await axios.post(
-      "https://dev.voce.chat/api/token/create_third_party_key",
+      `https://${third_domain}/api/token/create_third_party_key`,
       { userid: uid, username: uname },
       {
         headers: {
@@ -254,7 +255,7 @@ app.get("/voce/oauth/:uid/:uname", async (req, res) => {
     );
     console.log("voce", resp.data);
     return res.json({
-      link: `https://privoce.voce.chat/#/oauth/${resp.data}`,
+      link: `https://${third_domain}/#/oauth/${resp.data}`,
       token: resp.data,
     });
   } catch (error) {
