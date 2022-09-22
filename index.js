@@ -56,7 +56,8 @@ const io = socketIo(server, {
 });
 
 const PORT = 4000;
-
+// 全局存放新建的license: key:session_id,value:license_value
+const Licenses = {};
 io.on("connection", async (socket) => {
   console.log(`${socket.id} connected`);
   // Join a room
@@ -189,6 +190,113 @@ app.post("/stripe/webhook", async (req, res) => {
   }
   res.send();
 });
+// vocechat license checker
+app.get("/vocechat/licenses/:stripe_session_id", async (req, res) => {
+  const { stripe_session_id = "" } = req.params;
+  const license = Licenses[stripe_session_id] || "";
+  if (license) {
+    delete Licenses[stripe_session_id];
+    res.send({
+      license,
+    });
+  }
+  res.status(404).send("Not Found License");
+});
+// vocechat stripe payment link gen
+app.post("/vocechat/payment/create", async (req, res) => {
+  const { priceId, metadata, cancel_url, success_url } = req.body;
+  console.log("vocechat payment metadata", metadata);
+  // const { expire, user_limit, domain } =metadata;
+  // For full details see https://stripe.com/docs/api/checkout/sessions/create
+  try {
+    const session = await stripe.checkout.sessions.create({
+      mode: "payment",
+      payment_method_types: ["card"],
+      metadata,
+      line_items: [
+        {
+          price: priceId,
+          quantity: 1,
+        },
+      ],
+      // ?session_id={CHECKOUT_SESSION_ID} means the redirect will have the session ID set as a query param
+      success_url: `${success_url}/{CHECKOUT_SESSION_ID}`,
+      cancel_url,
+      // automatic_tax: { enabled: true }
+    });
+    res.send({
+      session_url: session.url,
+    });
+  } catch (e) {
+    res.status(400);
+    console.log("vocechat payment link error", JSON.stringify(e));
+    return res.send({
+      error: {
+        message: e.message,
+      },
+    });
+  }
+});
+// vocechat stripe webhook
+app.post("/stripe/webhook/vocechat", async (req, res) => {
+  const sig = req.headers["stripe-signature"];
+  if (!sig) {
+    console.log("vocechat webhook error: no sig");
+    res.status(400).send("No Sig");
+  }
+  let event;
+  try {
+    event = stripe.webhooks.constructEvent(
+      req.rawBody,
+      sig,
+      process.env.STRIPE_WEBHOOK_SECRET
+    );
+  } catch (err) {
+    console.log("vocechat webhook construct error: ", err.message);
+    res.status(400).send(`Webhook Error: ${err.message}`);
+    return;
+  }
+  console.log("stripe event", event.type);
+  if (event.type == "checkout.session.completed") {
+
+    const { metadata, id } = event.data.object;
+    console.log("event data", id, metadata);
+    // 记录到内存
+    try {
+      const resp = await axios.post(
+        "https://license.voce.chat/license/gen",
+        { expiry_at: metadata.expire, user_limit: +metadata.user_limit, domain: metadata.domain },
+        {
+          headers: {
+            "Content-Type": "application/json",
+            "Token": process.env.VOCE_LICENSE_TOKEN,
+          },
+        }
+      );
+      console.log("vocechat license", resp.data);
+      const { code, data } = resp.data;
+      if (code == 0) {
+        // 生成成功
+        Licenses[id] = data.license;
+        return res.status(200).json({ license: data.license });
+      }
+      return res.status(400).send("bad request!");
+    } catch (error) {
+      console.log("voce err", error);
+      return res.status(500).send("license gen failed!");
+    }
+  }
+  // switch (event.type) {
+  //   case "checkout.session.completed":
+  //     {
+  //     }
+  //     break;
+  //   // ... handle other event types
+  //   default:
+  //     console.log(`Unhandled event type ${event.type}`);
+  // }
+  res.send();
+});
 
 app.post("/subscription/create", async (req, res) => {
   const { user, priceId } = req.body;
@@ -237,6 +345,7 @@ app.post("/subscription/create", async (req, res) => {
     });
   }
 });
+
 // voce 第三方登录，拿token
 const third_domain = "webrowse.voce.chat";
 app.get("/voce/oauth/:uid/:uname", async (req, res) => {
