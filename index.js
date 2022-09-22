@@ -196,11 +196,11 @@ app.get("/vocechat/licenses/:stripe_session_id", async (req, res) => {
   const license = Licenses[stripe_session_id] || "";
   if (license) {
     delete Licenses[stripe_session_id];
-    res.send({
+    return res.send({
       license,
     });
   }
-  res.status(404).send("Not Found License");
+  return res.status(404).send("Not Found License");
 });
 // vocechat stripe payment link gen
 app.post("/vocechat/payment/create", async (req, res) => {
@@ -224,7 +224,7 @@ app.post("/vocechat/payment/create", async (req, res) => {
       cancel_url,
       // automatic_tax: { enabled: true }
     });
-    res.send({
+    return res.send({
       session_url: session.url,
     });
   } catch (e) {
