@@ -157,7 +157,7 @@ app.post("/stripe/webhook", async (req, res) => {
     event = stripe.webhooks.constructEvent(
       req.rawBody,
       sig,
-      process.env.STRIPE_WEBHOOK_SECRET
+      process.env.STRIPE_WEBHOOK_VERA_SECRET
     );
   } catch (err) {
     console.log(err.message);
@@ -249,7 +249,7 @@ app.post("/stripe/webhook/vocechat", async (req, res) => {
     event = stripe.webhooks.constructEvent(
       req.rawBody,
       sig,
-      process.env.STRIPE_WEBHOOK_SECRET
+      process.env.STRIPE_WEBHOOK_VOCECHAT_SECRET
     );
   } catch (err) {
     console.log("vocechat webhook construct error: ", err.message);
