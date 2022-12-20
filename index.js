@@ -190,6 +190,17 @@ app.post("/stripe/webhook", async (req, res) => {
   }
   res.send();
 });
+// vocechat webhook
+app.get("/vocechat/webhook", async (req, res) => {
+  return res.status(200).send("OK!");
+});
+app.post("/vocechat/webhook", async (req, res) => {
+  const data = req.params;
+  console.log("vocechat webhook data", JSON.stringify(data));
+  return res.send({
+    data,
+  });
+});
 // vocechat license checker
 app.get("/vocechat/licenses/:stripe_session_id", async (req, res) => {
   const { stripe_session_id = "" } = req.params;
@@ -258,18 +269,21 @@ app.post("/stripe/webhook/vocechat", async (req, res) => {
   }
   console.log("stripe event", event.type);
   if (event.type == "checkout.session.completed") {
-
     const { metadata, id } = event.data.object;
     console.log("event data", id, metadata);
     // 记录到内存
     try {
       const resp = await axios.post(
         "https://license.voce.chat/license/gen",
-        { expiry_at: metadata.expire, user_limit: +metadata.user_limit, domain: metadata.domain },
+        {
+          expiry_at: metadata.expire,
+          user_limit: +metadata.user_limit,
+          domain: metadata.domain,
+        },
         {
           headers: {
             "Content-Type": "application/json",
-            "Token": process.env.VOCE_LICENSE_TOKEN,
+            Token: process.env.VOCE_LICENSE_TOKEN,
           },
         }
       );
