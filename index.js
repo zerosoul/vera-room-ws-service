@@ -195,7 +195,7 @@ app.get("/vocechat/webhook", async (req, res) => {
   return res.status(200).send("OK!");
 });
 app.post("/vocechat/webhook", async (req, res) => {
-  const data = req.params;
+  const data = req.body;
   console.log("vocechat webhook data", JSON.stringify(data));
   return res.send({
     data,
