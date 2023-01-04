@@ -196,7 +196,7 @@ app.get("/vocechat/webhook", async (req, res) => {
 });
 app.post("/vocechat/webhook", async (req, res) => {
   const data = req.body;
-  console.log("vocechat webhook data", JSON.stringify(data));
+  console.log("vocechat webhook data", data);
   return res.send({
     data,
   });
@@ -215,13 +215,19 @@ app.get("/vocechat/licenses/:stripe_session_id", async (req, res) => {
 });
 // vocechat stripe payment link gen
 app.post("/vocechat/payment/create", async (req, res) => {
-  const { priceId, metadata, cancel_url, success_url } = req.body;
+  const {
+    priceId,
+    metadata,
+    cancel_url,
+    success_url,
+    mode = "payment",
+  } = req.body;
   console.log("vocechat payment metadata", metadata);
   // const { expire, user_limit, domain } =metadata;
   // For full details see https://stripe.com/docs/api/checkout/sessions/create
   try {
     const session = await stripe.checkout.sessions.create({
-      mode: "payment",
+      mode,
       payment_method_types: ["card"],
       metadata,
       line_items: [
