@@ -228,7 +228,7 @@ app.post("/vocechat/payment/create", async (req, res) => {
   try {
     const session = await stripe.checkout.sessions.create({
       mode,
-      payment_method_types: ["card"],
+      payment_method_types: ["card", "alipay", "wechat"],
       metadata,
       line_items: [
         {
@@ -365,6 +365,8 @@ app.post("/subscription/create", async (req, res) => {
     });
   }
 });
+
+// PUT https://privoce.voce.chat/api/license
 
 // voce 第三方登录，拿token
 const third_domain = "webrowse.voce.chat";
