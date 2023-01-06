@@ -228,7 +228,7 @@ app.post("/vocechat/payment/create", async (req, res) => {
   try {
     const session = await stripe.checkout.sessions.create({
       mode,
-      payment_method_types: ["card", "alipay", "wechat"],
+      payment_method_types: ["card", "alipay", "wechat_pay"],
       metadata,
       line_items: [
         {
