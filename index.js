@@ -228,8 +228,18 @@ app.post("/vocechat/payment/create", async (req, res) => {
   try {
     const session = await stripe.checkout.sessions.create({
       mode,
-      payment_method_types: ["card", "alipay", "wechat_pay"],
+      // 支付宝和微信不支持订阅制
+      payment_method_types:
+        mode == "subscription" ? ["card"] : ["card", "alipay", "wechat_pay"],
       metadata,
+      payment_method_options:
+        mode == "subscription"
+          ? undefined
+          : {
+              wechat_pay: {
+                client: "web",
+              },
+            },
       line_items: [
         {
           price: priceId,
