@@ -190,6 +190,16 @@ app.post("/stripe/webhook", async (req, res) => {
   }
   res.send();
 });
+const generateLicense = async (md) => {
+  const resp = await axios.post("https://license.voce.chat/license/gen", md, {
+    headers: {
+      "Content-Type": "application/json",
+      Token: process.env.VOCE_LICENSE_TOKEN,
+    },
+  });
+  console.log("vocechat license", resp.data);
+  return resp.data;
+};
 // vocechat webhook
 app.get("/vocechat/webhook", async (req, res) => {
   return res.status(200).send("OK!");
@@ -213,6 +223,27 @@ app.get("/vocechat/licenses/:stripe_session_id", async (req, res) => {
   }
   return res.status(404).send("Not Found License");
 });
+// vocechat license generator
+app.post("/vocechat/license", async (req, res) => {
+  const { stripe_session_id = "", domain = "" } = req.body;
+  const license = Licenses[stripe_session_id] || "";
+  if (license && license.expiry_at && domain) {
+    license.domain = domain;
+    try {
+      const { code, data } = await generateLicense(license);
+      if (code == 0) {
+        // 生成成功 立即删掉记录
+        delete Licenses[stripe_session_id];
+        return res.status(200).json({ license: data.license });
+      }
+      return res.status(400).send("bad request!");
+    } catch (error) {
+      console.log("voce err", error);
+      return res.status(500).send("license gen failed!");
+    }
+  }
+  return res.status(404).send("Not Found License");
+});
 // vocechat stripe payment link gen
 app.post("/vocechat/payment/create", async (req, res) => {
   const {
@@ -225,6 +256,8 @@ app.post("/vocechat/payment/create", async (req, res) => {
   console.log("vocechat payment metadata", metadata);
   // const { expire, user_limit, domain } =metadata;
   // For full details see https://stripe.com/docs/api/checkout/sessions/create
+  // 标识一下来自于vocechat的付款
+  metadata.from = "vocechat";
   try {
     const session = await stripe.checkout.sessions.create({
       mode,
@@ -287,44 +320,33 @@ app.post("/stripe/webhook/vocechat", async (req, res) => {
   if (event.type == "checkout.session.completed") {
     const { metadata, id } = event.data.object;
     console.log("event data", id, metadata);
-    // 记录到内存
-    try {
-      const resp = await axios.post(
-        "https://license.voce.chat/license/gen",
-        {
-          expiry_at: metadata.expire,
-          user_limit: +metadata.user_limit,
-          domain: metadata.domain,
-        },
-        {
-          headers: {
-            "Content-Type": "application/json",
-            Token: process.env.VOCE_LICENSE_TOKEN,
-          },
-        }
-      );
-      console.log("vocechat license", resp.data);
-      const { code, data } = resp.data;
-      if (code == 0) {
-        // 生成成功
-        Licenses[id] = data.license;
-        return res.status(200).json({ license: data.license });
+    // 只处理来自vocechat的付款请求
+    if (metadata && metadata.from == "vocechat") {
+      const md = {
+        expiry_at: metadata.expire,
+        user_limit: +metadata.user_limit,
+        domain: metadata.domain,
+      };
+      // 没填domain，则暂时记录下session_id
+      if (!md.domain) {
+        Licenses[id] = md;
+        return res.status(200);
       }
-      return res.status(400).send("bad request!");
-    } catch (error) {
-      console.log("voce err", error);
-      return res.status(500).send("license gen failed!");
+      // 记录到内存
+      try {
+        const { code, data } = await generateLicense(md);
+        if (code == 0) {
+          // 生成成功
+          Licenses[id] = data.license;
+          return res.status(200).json({ license: data.license });
+        }
+        return res.status(400).send("bad request!");
+      } catch (error) {
+        console.log("voce err", error);
+        return res.status(500).send("license gen failed!");
+      }
     }
   }
-  // switch (event.type) {
-  //   case "checkout.session.completed":
-  //     {
-  //     }
-  //     break;
-  //   // ... handle other event types
-  //   default:
-  //     console.log(`Unhandled event type ${event.type}`);
-  // }
   res.send();
 });
 
