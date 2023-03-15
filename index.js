@@ -190,11 +190,12 @@ app.post("/stripe/webhook", async (req, res) => {
   }
   res.send();
 });
-const generateLicense = async (md) => {
+
+const generateLicense = async (md, token = null) => {
   const resp = await axios.post("https://license.voce.chat/license/gen", md, {
     headers: {
       "Content-Type": "application/json",
-      Token: process.env.VOCE_LICENSE_TOKEN,
+      Token: token ?? process.env.VOCE_LICENSE_TOKEN,
     },
   });
   console.log("vocechat license", resp.data);
@@ -223,7 +224,7 @@ app.get("/vocechat/licenses/:stripe_session_id", async (req, res) => {
   }
   return res.status(404).send("Not Found License");
 });
-// vocechat license generator
+// vocechat license generator for web app
 app.post("/vocechat/license", async (req, res) => {
   const { stripe_session_id = "", domain = "" } = req.body;
   const license = Licenses[stripe_session_id] || "";
@@ -243,6 +244,24 @@ app.post("/vocechat/license", async (req, res) => {
     }
   }
   return res.status(404).send("Not Found License");
+});
+// vocechat license generator for landing
+app.post("/vocechat/landing/license", async (req, res) => {
+  const { token, data: reqData } = req.body;
+  if (token && reqData) {
+    try {
+      const { code, data } = await generateLicense(reqData, token);
+      if (code == 0) {
+        // 生成成功
+        return res.status(200).json({ license: data.license });
+      }
+      return res.status(400).send("bad request!");
+    } catch (error) {
+      console.log("voce err", error);
+      return res.status(500).send("license gen failed!");
+    }
+  }
+  return res.status(400).send("bad request!");
 });
 // vocechat stripe payment link gen
 app.post("/vocechat/payment/create", async (req, res) => {
