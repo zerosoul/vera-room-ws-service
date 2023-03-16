@@ -247,10 +247,12 @@ app.post("/vocechat/license", async (req, res) => {
 });
 // vocechat license generator for landing
 app.post("/vocechat/landing/license", async (req, res) => {
-  const { token, data: reqData } = req.body;
-  if (token && reqData) {
+  const { secret, data: reqData } = req.body;
+  if (secret !== process.env.VOCE_LICENSE_PASSWORD)
+    return res.status(401).send("Not Authenticated");
+  if (reqData) {
     try {
-      const { code, data } = await generateLicense(reqData, token);
+      const { code, data } = await generateLicense(reqData);
       if (code == 0) {
         // 生成成功
         // 通过bot给vocechat发消息
@@ -266,8 +268,7 @@ app.post("/vocechat/landing/license", async (req, res) => {
           .post("https://dev.voce.chat/api/bot/send_to_group/166", botData, {
             headers: {
               "content-type": "text/markdown",
-              "x-api-key":
-                "1701f1725f166cf84744f5337fe0215b9e30e8ec457f5160fb7fccc4f05888b07b22756964223a31333436362c226e6f6e6365223a2269686a4241533938456d5141414141416a616232465849725458384a37323675227d",
+              "x-api-key": process.env.VOCE_LICENSE_BOT,
             },
           })
           .then((resp) => {
