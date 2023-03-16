@@ -246,10 +246,17 @@ app.post("/vocechat/license", async (req, res) => {
   return res.status(404).send("Not Found License");
 });
 // vocechat license generator for landing
+const WhiteMap = {};
+const envString = process.env.VOCE_LICENSE_PASSWORD ?? "";
+envString.split("|").forEach((item) => {
+  if (item.includes(":")) {
+    const [secret, name] = item.split(":");
+    WhiteMap[secret] = name;
+  }
+});
 app.post("/vocechat/landing/license", async (req, res) => {
   const { secret, data: reqData } = req.body;
-  if (secret !== process.env.VOCE_LICENSE_PASSWORD)
-    return res.status(401).send("Not Authenticated");
+  if (!WhiteMap[secret]) return res.status(401).send("Not Authenticated");
   if (reqData) {
     try {
       const { code, data } = await generateLicense(reqData);
@@ -257,6 +264,8 @@ app.post("/vocechat/landing/license", async (req, res) => {
         // 生成成功
         // 通过bot给vocechat发消息
         const botData = [
+          "## from",
+          `**${WhiteMap[secret]}**`,
           "## data",
           "```json",
           JSON.stringify(reqData),
