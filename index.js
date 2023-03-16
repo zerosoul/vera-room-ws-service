@@ -254,6 +254,14 @@ envString.split("|").forEach((item) => {
     WhiteMap[secret] = name;
   }
 });
+// 先配对
+app.post("/vocechat/landing/license/pair", async (req, res) => {
+  const { secret } = req.body;
+  const name = WhiteMap[secret];
+  if (!name) return res.status(401).send("Not Authenticated");
+  return res.status(200).json({ name });
+});
+
 app.post("/vocechat/landing/license", async (req, res) => {
   const { secret, data: reqData } = req.body;
   if (!WhiteMap[secret]) return res.status(401).send("Not Authenticated");
