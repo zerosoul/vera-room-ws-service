@@ -56,7 +56,7 @@ const io = socketIo(server, {
 });
 
 const PORT = 4000;
-// 全局存放新建的license: key:session_id,value:license_value
+// 全局存放新建的 license: key:session_id,value:license_value
 const Licenses = {};
 io.on("connection", async (socket) => {
   console.log(`${socket.id} connected`);
@@ -192,7 +192,7 @@ app.post("/stripe/webhook", async (req, res) => {
 });
 
 const generateLicense = async (md, token = null) => {
-  const resp = await axios.post("https://license.voce.chat/license/gen", md, {
+  const resp = await axios.post("https://license.ipter.org/license/gen", md, {
     headers: {
       "Content-Type": "application/json",
       Token: token ?? process.env.VOCE_LICENSE_TOKEN,
@@ -270,7 +270,7 @@ app.post("/vocechat/landing/license", async (req, res) => {
       const { code, data } = await generateLicense(reqData);
       if (code == 0) {
         // 生成成功
-        // 通过bot给vocechat发消息
+        // 通过 bot 给 vocechat 发消息
         const botData = [
           "## from",
           `**${WhiteMap[secret]}**`,
@@ -289,7 +289,7 @@ app.post("/vocechat/landing/license", async (req, res) => {
             },
           })
           .then((resp) => {
-            console.log("发送成功，消息ID：", resp.data);
+            console.log("发送成功，消息 ID：", resp.data);
           })
           .catch((err) => {
             console.error("发送失败：", JSON.stringify(err, 2), data);
@@ -317,7 +317,7 @@ app.post("/vocechat/payment/create", async (req, res) => {
   console.log("vocechat payment metadata", metadata);
   // const { expire, user_limit, domain } =metadata;
   // For full details see https://stripe.com/docs/api/checkout/sessions/create
-  // 标识一下来自于vocechat的付款
+  // 标识一下来自于 vocechat 的付款
   metadata.from = "vocechat";
   try {
     const session = await stripe.checkout.sessions.create({
@@ -381,14 +381,14 @@ app.post("/stripe/webhook/vocechat", async (req, res) => {
   if (event.type == "checkout.session.completed") {
     const { metadata, id } = event.data.object;
     console.log("event data", id, metadata);
-    // 只处理来自vocechat的付款请求
+    // 只处理来自 vocechat 的付款请求
     if (metadata && metadata.from == "vocechat") {
       const md = {
         expiry_at: metadata.expire,
         user_limit: +metadata.user_limit,
         domain: metadata.domain,
       };
-      // 没填domain，则暂时记录下session_id
+      // 没填 domain，则暂时记录下 session_id
       if (!md.domain) {
         Licenses[id] = md;
         return res.status(200);
@@ -461,7 +461,7 @@ app.post("/subscription/create", async (req, res) => {
 
 // PUT https://privoce.voce.chat/api/license
 
-// voce 第三方登录，拿token
+// voce 第三方登录，拿 token
 const third_domain = "webrowse.voce.chat";
 app.get("/voce/oauth/:uid/:uname", async (req, res) => {
   const { uid, uname } = req.params;
@@ -602,7 +602,7 @@ app.post("/webrowse/window", async (req, res) => {
   if (!title) return res.json(null);
   try {
     const result = await gRequest(NEW_WINDOW, { room: "workspace", title });
-    // 创建新window成功
+    // 创建新 window 成功
     console.log("new window", result);
     if (result.insert_portal_window?.returning[0]?.id) {
       const id = result.insert_portal_window?.returning[0]?.id;
