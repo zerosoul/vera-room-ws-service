@@ -21,6 +21,7 @@
     "nodemon": "^2.0.21",
     "socket.io": "^4.6.1",
     "stripe": "^10.10.0",
+    "url-unshort": "^6.0.0",
     "uuid": "^9.0.0"
   },
   "devDependencies": {

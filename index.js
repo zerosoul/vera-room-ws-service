@@ -5,6 +5,7 @@ const bodyParser = require("body-parser");
 const express = require("express");
 const cors = require("cors");
 const socketIo = require("socket.io");
+const unshort = require("url-unshort");
 const { ManagementClient } = require("authing-js-sdk");
 const { arrayChunks } = require("./utils");
 const {
@@ -201,6 +202,16 @@ const generateLicense = async (md, token = null) => {
   console.log("vocechat license", resp.data);
   return resp.data;
 };
+const unshortIt = unshort();
+app.get("/expand_url", async (req, res) => {
+  const link = req.query["u"];
+  try {
+    const url = await unshortIt.expand(link);
+    return res.status(200).send({ expandedURL: url || link, url: link });
+  } catch (error) {
+    return res.status(200).send({ expandedURL: "", url: link });
+  }
+});
 // vocechat webhook
 app.get("/vocechat/webhook", async (req, res) => {
   return res.status(200).send("OK!");
