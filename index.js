@@ -42,7 +42,7 @@ app.use(
         req.rawBody = buf.toString();
       }
     },
-  })
+  }),
 );
 const server = http.createServer(app);
 const io = socketIo(server, {
@@ -158,7 +158,7 @@ app.post("/stripe/webhook", async (req, res) => {
     event = stripe.webhooks.constructEvent(
       req.rawBody,
       sig,
-      process.env.STRIPE_WEBHOOK_VERA_SECRET
+      process.env.STRIPE_WEBHOOK_VERA_SECRET,
     );
   } catch (err) {
     console.log(err.message);
@@ -193,7 +193,7 @@ app.post("/stripe/webhook", async (req, res) => {
 });
 
 const generateLicense = async (md, token = null) => {
-  const resp = await axios.post("https://license.ipter.org/license/gen", md, {
+  const resp = await axios.post("https://license.privoce.com/license/gen", md, {
     headers: {
       "Content-Type": "application/json",
       Token: token ?? process.env.VOCE_LICENSE_TOKEN,
@@ -381,7 +381,7 @@ app.post("/stripe/webhook/vocechat", async (req, res) => {
     event = stripe.webhooks.constructEvent(
       req.rawBody,
       sig,
-      process.env.STRIPE_WEBHOOK_VOCECHAT_SECRET
+      process.env.STRIPE_WEBHOOK_VOCECHAT_SECRET,
     );
   } catch (err) {
     console.log("vocechat webhook construct error: ", err.message);
@@ -486,7 +486,7 @@ app.get("/voce/oauth/:uid/:uname", async (req, res) => {
           "Content-Type": "application/json",
           "X-SECRET": process.env.VOCE_SECRET,
         },
-      }
+      },
     );
     console.log("voce", resp.data);
     return res.json({
@@ -662,7 +662,7 @@ app.get("/members/authing/:username", async (req, res) => {
     let results = await Promise.all(
       chunks.map((ids) => {
         return managementClient.users.getUdfValueBatch(ids);
-      })
+      }),
     );
     // udfs = await managementClient.users.getUdfValueBatch(
     //   users.map((u) => u.uid),
